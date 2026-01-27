@@ -56,6 +56,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,9 +73,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.theme.LightBackground
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -133,29 +139,30 @@ fun SpacesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp),
+                .padding(top = 10.dp, bottom = 4.dp), // Adjusted padding
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "我的空间",
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    color = TextPrimary
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 32.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${spaces.size} 个空间",
-                    color = TextSecondary,
-                    fontSize = 15.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             ActionButton(
@@ -169,12 +176,12 @@ fun SpacesScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp)) // Increased spacer for airiness
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp), // Increased spacing
+            horizontalArrangement = Arrangement.spacedBy(20.dp), // Increased spacing
             modifier = Modifier.fillMaxSize()
         ) {
             items(spaces, key = { it.id }) { space ->
@@ -198,12 +205,21 @@ fun SpacesScreen(
                     onClick = {
                         viewModel.removeSpace(spaceId)
                         pendingDeleteSpaceId = null
-                    }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = RoundedCornerShape(100.dp) // Pill shape
                 ) { Text("删除") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { pendingDeleteSpaceId = null }) { Text("取消") }
-            }
+                OutlinedButton(
+                    onClick = { pendingDeleteSpaceId = null },
+                    shape = RoundedCornerShape(100.dp) // Pill shape
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
@@ -211,26 +227,26 @@ fun SpacesScreen(
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
                     text = "新建空间",
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = TextPrimary
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 OutlinedTextField(
                     value = newSpaceName,
                     onValueChange = { newSpaceName = it },
                     label = { Text("空间名称") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
 
                 TemplatePicker(
@@ -240,11 +256,11 @@ fun SpacesScreen(
 
                 Text(
                     text = "选择封面照片",
-                    color = TextSecondary,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     FilledTonalButton(
@@ -259,7 +275,7 @@ fun SpacesScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(100.dp) // Pill
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoCamera, contentDescription = null)
                         Spacer(modifier = Modifier.size(8.dp))
@@ -275,14 +291,14 @@ fun SpacesScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(100.dp) // Pill
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoLibrary, contentDescription = null)
                         Spacer(modifier = Modifier.size(8.dp))
                         Text("相册")
                     }
                 }
-                OutlinedButton(
+                androidx.compose.material3.Button( // Use primary button for "create directly"
                     onClick = {
                         val name = newSpaceName.trim()
                         if (name.isBlank()) {
@@ -294,7 +310,7 @@ fun SpacesScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(100.dp) // Pill
                 ) {
                     Text("直接创建")
                 }
@@ -316,24 +332,25 @@ fun ActionButton(
     ) {
         Surface(
             modifier = Modifier
-                .size(58.dp)
-                .shadow(elevation = 10.dp, shape = CircleShape, clip = false)
+                .size(56.dp) // Slightly smaller
+                .shadow(elevation = 8.dp, shape = CircleShape, clip = false) // Softer shadow
                 .clip(CircleShape)
                 .clickable(onClick = onClick),
-            color = Color.White
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = TextPrimary
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
         Text(
             text = label,
-            color = TextPrimary,
-            fontSize = 13.sp
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }
@@ -347,35 +364,48 @@ fun ModernSpaceCard(
 ) {
     val context = LocalContext.current
     val coverMaxPx = with(LocalDensity.current) { 900.dp.roundToPx() }
-    val coverBitmap = remember(space.coverImagePath) {
-        space.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
+    // 异步加载图片，避免主线程阻塞
+    var coverBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(space.coverImagePath) {
+        coverBitmap = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            space.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
+        }
     }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 10.dp, shape = RoundedCornerShape(22.dp), clip = false)
-            .clip(RoundedCornerShape(22.dp))
+            // Hygge: Increased corner radius (24.dp) and softer shadow (tonal + less elevation)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                clip = false,
+                ambientColor = Color(0x408D7B68), // Warm shadow hint
+                spotColor = Color(0x408D7B68)
+            )
+            .clip(RoundedCornerShape(24.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp // Slight tonal elevation for separation
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFFEAE7E2)),
+                    .clip(RoundedCornerShape(20.dp)) // Nested soft corner
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (coverBitmap != null) {
+                val bitmap = coverBitmap
+                if (bitmap != null) {
                     Image(
-                        bitmap = coverBitmap.asImageBitmap(),
+                        bitmap = bitmap.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -384,23 +414,24 @@ fun ModernSpaceCard(
                     Icon(
                         imageVector = Icons.Filled.PhotoLibrary,
                         contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(36.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
-            Text(
-                text = space.name,
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = TextPrimary
-            )
-            Text(
-                text = "${space.itemCount} 个物品",
-                color = TextSecondary,
-                fontSize = 14.sp
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = space.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Text(
+                    text = "${space.itemCount} 个物品",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

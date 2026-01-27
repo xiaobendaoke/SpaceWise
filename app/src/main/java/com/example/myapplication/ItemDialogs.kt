@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,8 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -133,11 +133,16 @@ fun ItemUpsertDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEdit) "编辑物品" else "添加物品") },
+        title = {
+            Text(
+                if (isEdit) "编辑物品" else "添加物品",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (!isEdit && spots.size > 1) {
                     SimpleSpotPicker(
@@ -151,32 +156,37 @@ fun ItemUpsertDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("物品名称") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
                     label = { Text("备注") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
                 OutlinedTextField(
                     value = expiry,
                     onValueChange = { expiry = it },
                     label = { Text("过期日期（YYYY-MM-DD）") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = currentQty,
                         onValueChange = { currentQty = it },
                         label = { Text("当前数量") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
                     )
                     OutlinedTextField(
                         value = minQty,
                         onValueChange = { minQty = it },
                         label = { Text("最低数量") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
                     )
                 }
 
@@ -198,8 +208,8 @@ fun ItemUpsertDialog(
                             .fillMaxWidth()
                             .height(180.dp)
                             .clickable { fullscreenImagePath = imagePath },
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF0EFEA)
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Image(
                             bitmap = preview.asImageBitmap(),
@@ -210,7 +220,7 @@ fun ItemUpsertDialog(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     FilledTonalButton(
                         onClick = {
                             val uri = viewModel.createTempCameraUri()
@@ -218,19 +228,19 @@ fun ItemUpsertDialog(
                             takePictureLauncher.launch(uri)
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(100.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoCamera, contentDescription = null)
-                        Spacer(modifier = Modifier.size(6.dp))
+                        Spacer(modifier = Modifier.size(8.dp))
                         Text("拍照")
                     }
                     FilledTonalButton(
                         onClick = { pickGalleryLauncher.launch("image/*") },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(100.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoLibrary, contentDescription = null)
-                        Spacer(modifier = Modifier.size(6.dp))
+                        Spacer(modifier = Modifier.size(8.dp))
                         Text("相册")
                     }
                 }
@@ -252,7 +262,7 @@ fun ItemUpsertDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(100.dp)
                 ) {
                     Text(if (ocrBusy) "识别中..." else "OCR 识别填充")
                 }
@@ -264,7 +274,11 @@ fun ItemUpsertDialog(
                             viewModel.removeItem(spaceId, spots.first().id, item.id)
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(100.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
                     ) { Text("删除物品") }
                 }
             }
@@ -309,10 +323,18 @@ fun ItemUpsertDialog(
                         )
                     }
                     onDismiss()
-                }
+                },
+                shape = RoundedCornerShape(100.dp)
             ) { Text("保存") }
         },
-        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(100.dp)
+            ) { Text("取消") }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
     )
 
     fullscreenImagePath?.let { path ->
@@ -334,20 +356,21 @@ fun BatchAddDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("批量添加") },
+        title = { Text("批量添加", style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("每行一个物品名称", color = TextSecondary, fontSize = 12.sp)
+                Text("每行一个物品名称", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 120.dp),
-                    label = { Text("物品列表") }
+                    label = { Text("物品列表") },
+                    shape = RoundedCornerShape(16.dp)
                 )
                 TagPickerSection(
                     allTags = allTags,
@@ -368,10 +391,18 @@ fun BatchAddDialog(
                     }
                     viewModel.addItemsBatch(spaceId, spotId, names, selectedTagIds.toList())
                     onDismiss()
-                }
+                },
+                shape = RoundedCornerShape(100.dp)
             ) { Text("添加") }
         },
-        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(100.dp)
+            ) { Text("取消") }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
     )
 }
 
@@ -403,15 +434,24 @@ fun SpotItemsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("${spot.name} 的物品") },
+        title = {
+            Text(
+                "${spot.name}",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (spot.items.isEmpty()) {
-                    Text("暂无物品", color = TextSecondary)
+                    Text(
+                        "暂无物品",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
                     LazyColumn(
                         state = listState,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f, fill = false)
@@ -422,17 +462,22 @@ fun SpotItemsDialog(
                                 item.imagePath?.let { loadThumbnailFromInternalPath(context, it, thumbSizePx) }
                             }
                             val highlighted = item.id == highlightItemId
+                            
+                            // Item Row
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (highlighted) androidx.compose.ui.graphics.Color(0xFFEDE6DB) else androidx.compose.ui.graphics.Color.Transparent)
-                                    .border(
-                                        width = if (highlighted) 1.dp else 0.dp,
-                                        color = if (highlighted) androidx.compose.ui.graphics.Color(0xFFB59F88) else androidx.compose.ui.graphics.Color.Transparent,
-                                        shape = RoundedCornerShape(14.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        if (highlighted) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha=0.3f) 
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                     )
-                                    .padding(8.dp)
+                                    .border(
+                                        width = if (highlighted) 2.dp else 0.dp,
+                                        color = if (highlighted) MaterialTheme.colorScheme.tertiary else Color.Transparent,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(10.dp)
                                     .combinedClickable(
                                         onClick = { editingItemId = item.id },
                                         onLongClick = { editingItemId = item.id }
@@ -443,10 +488,10 @@ fun SpotItemsDialog(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(48.dp)
                                             .clickable { fullscreenImagePath = item.imagePath },
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = Color(0xFFF0EFEA)
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.surface
                                     ) {
                                         if (thumb != null) {
                                             Image(
@@ -459,16 +504,20 @@ fun SpotItemsDialog(
                                             Icon(
                                                 imageVector = Icons.Filled.PhotoLibrary,
                                                 contentDescription = null,
-                                                tint = TextSecondary,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier
-                                                    .padding(8.dp)
+                                                    .padding(10.dp)
                                                     .fillMaxWidth()
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.size(10.dp))
+                                    Spacer(modifier = Modifier.size(12.dp))
                                     Column {
-                                        Text(item.name, color = TextPrimary, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            item.name,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
                                         val subtitle = buildString {
                                             if (!item.note.isNullOrBlank()) append(item.note)
                                             if (item.expiryDateEpochMs != null) {
@@ -482,26 +531,30 @@ fun SpotItemsDialog(
                                             }
                                         }
                                         if (subtitle.isNotBlank()) {
-                                            Text(subtitle, color = TextSecondary, fontSize = 12.sp)
+                                            Text(
+                                                subtitle,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = TextSecondary
+                                    modifier = Modifier.size(18.dp).rotate(180f),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     FilledTonalButton(
                         onClick = { showAdd = true },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(100.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.Add, contentDescription = null)
                         Spacer(modifier = Modifier.size(6.dp))
@@ -510,16 +563,30 @@ fun SpotItemsDialog(
                     FilledTonalButton(
                         onClick = { showBatch = true },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(100.dp)
                     ) { Text("批量") }
                 }
 
-                OutlinedButton(onClick = onDeleteSpot, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = onDeleteSpot,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(100.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
                     Text("删除空间")
                 }
             }
         },
-        confirmButton = { OutlinedButton(onClick = onDismiss) { Text("关闭") } }
+        confirmButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(100.dp)
+            ) { Text("关闭") }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
     )
 
     fullscreenImagePath?.let { path ->
@@ -565,22 +632,28 @@ fun SimpleSpotPicker(
     selectedSpotId: String?,
     onSelectSpot: (String) -> Unit,
 ) {
-    // Minimal picker (inline list). The full exposed dropdown is already in MainActivity for spaces.
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("所在地点", color = TextSecondary, fontSize = 12.sp)
+    // Minimal picker (inline list).
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "所在地点",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         spots.forEach { spot ->
             val selected = spot.id == selectedSpotId
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onSelectSpot(spot.id) },
-                shape = RoundedCornerShape(10.dp),
-                color = if (selected) androidx.compose.ui.graphics.Color(0xFFEAE1D6) else androidx.compose.ui.graphics.Color.White
+                shape = RoundedCornerShape(14.dp),
+                color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                border = if(selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Text(
                     text = spot.name,
-                    modifier = Modifier.padding(10.dp),
-                    color = TextPrimary
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -593,7 +666,6 @@ fun FullScreenImageDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    // Load with a large enough max dimension for full screen clarity
     val bitmap = remember(imagePath) { loadBitmapFromInternalPath(context, imagePath, 2000) }
 
     Dialog(
@@ -614,7 +686,7 @@ fun FullScreenImageDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(bitmap.width.toFloat() / bitmap.height.toFloat())
-                        .clickable(enabled = false) { } // Prevent click-through closing
+                        .clickable(enabled = false) { }
                 )
             }
         }

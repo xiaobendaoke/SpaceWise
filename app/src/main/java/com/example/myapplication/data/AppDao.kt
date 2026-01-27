@@ -133,6 +133,9 @@ interface AppDao {
     )
     suspend fun listExpiringItems(upperBoundEpochMs: Long): List<ExpiringItemRow>
 
+    @Query("SELECT COUNT(*) FROM items WHERE expiryDateEpochMs IS NOT NULL AND expiryDateEpochMs <= :upperBoundEpochMs AND expiryDateEpochMs > :lowerBoundEpochMs")
+    fun observeExpiringItemsCount(lowerBoundEpochMs: Long, upperBoundEpochMs: Long): Flow<Int>
+
     @Query(
         """
         SELECT i.*

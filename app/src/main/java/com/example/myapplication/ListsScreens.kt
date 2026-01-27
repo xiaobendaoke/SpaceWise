@@ -24,9 +24,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -70,9 +73,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.theme.LightBackground
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,102 +86,123 @@ fun ListsScreen(
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "清单",
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "${lists.size} 个清单",
-                    color = TextSecondary,
-                    fontSize = 15.sp
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ActionButton(
-                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
-                    label = "生成补货",
-                    onClick = { viewModel.generateRestockList() }
-                )
-                ActionButton(
-                    icon = Icons.Filled.Add,
-                    label = "新建清单",
-                    onClick = {
-                        newName = ""
-                        showSheet = true
-                    }
-                )
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "清单",
+                        style = MaterialTheme.typography.displayLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 32.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${lists.size} 个清单",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ActionButton(
+                        icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                        label = "生成补货",
+                        onClick = { viewModel.generateRestockList() }
+                    )
+                    ActionButton(
+                        icon = Icons.Filled.Add,
+                        label = "新建清单",
+                        onClick = {
+                            newName = ""
+                            showSheet = true
+                        }
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         if (lists.isEmpty()) {
-            Text("暂无清单", color = TextSecondary, modifier = Modifier.padding(top = 20.dp))
+            item {
+                Text(
+                    text = "暂无清单",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 20.dp)
+                )
+            }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                lists.forEach { list ->
+            items(lists, key = { it.id }) { list ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = RoundedCornerShape(24.dp),
+                            clip = false,
+                            ambientColor = Color(0x408D7B68),
+                            spotColor = Color(0x408D7B68)
+                        )
+                        .clip(RoundedCornerShape(24.dp))
                         .clickable { onOpenList(list.id) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    shadowElevation = 4.dp
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(list.name, fontWeight = FontWeight.Medium, color = TextPrimary)
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = list.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
         }
     }
-}
 
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
                     text = "新建清单",
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = TextPrimary
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
                     label = { Text("清单名称") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
                 )
-                OutlinedButton(
+                androidx.compose.material3.Button(
                     onClick = {
                         val name = newName.trim()
                         if (name.isNotBlank()) {
@@ -191,7 +212,7 @@ fun ListsScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(100.dp)
                 ) {
                     Text("创建")
                 }
@@ -239,76 +260,112 @@ fun ListDetailScreen(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
-            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
-            .statusBarsPadding()
+            .statusBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Text(
+                        text = list?.name ?: "清单",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
-                Text(list?.name ?: "清单", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary)
+                OutlinedButton(
+                    onClick = { confirmDelete = true },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("删除") }
             }
-            OutlinedButton(onClick = { confirmDelete = true }) { Text("删除") }
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = newItem,
-                onValueChange = { newItem = it },
-                label = { Text("新增条目") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { addNow() }),
-                modifier = Modifier.weight(1f)
-            )
-            Button(
-                onClick = { addNow() },
-                enabled = canAdd,
-                modifier = Modifier.heightIn(min = 56.dp)
-            ) { Text("添加") }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = newItem,
+                    onValueChange = { newItem = it },
+                    label = { Text("新增条目") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { addNow() }),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                androidx.compose.material3.Button(
+                    onClick = { addNow() },
+                    enabled = canAdd,
+                    modifier = Modifier.heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) { Text("添加") }
+            }
         }
-        Spacer(modifier = Modifier.height(12.dp))
+
         if (items.isEmpty()) {
-            Text("暂无条目", color = TextSecondary)
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("暂无条目", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                items.forEach { item ->
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
+            items(items, key = { it.id }) { item ->
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 2.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            clip = false,
+                            ambientColor = Color(0x208D7B68),
+                            spotColor = Color(0x208D7B68)
+                        ),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = item.checked,
-                                    onCheckedChange = { viewModel.toggleListItemChecked(item) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = item.checked,
+                                onCheckedChange = { viewModel.toggleListItemChecked(item) }
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Column {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Column {
-                                    Text(item.name, color = TextPrimary)
-                                    val q = item.quantityNeeded
-                                    if (q != null) Text("建议补 $q", color = TextSecondary, fontSize = 12.sp)
-                                }
+                                val q = item.quantityNeeded
+                                if (q != null) Text("建议补 $q", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
                             }
-                            OutlinedButton(onClick = { viewModel.deleteListItem(item.id) }) { Text("删除") }
+                        }
+                        IconButton(onClick = { viewModel.deleteListItem(item.id) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Remove",
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
@@ -322,15 +379,26 @@ fun ListDetailScreen(
             title = { Text("删除清单") },
             text = { Text("确定删除该清单吗？") },
             confirmButton = {
-                Button(
+                androidx.compose.material3.Button(
                     onClick = {
                         viewModel.deleteList(listId)
                         confirmDelete = false
                         onBack()
-                    }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                         containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = RoundedCornerShape(100.dp)
                 ) { Text("删除") }
             },
-            dismissButton = { OutlinedButton(onClick = { confirmDelete = false }) { Text("取消") } }
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { confirmDelete = false },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }

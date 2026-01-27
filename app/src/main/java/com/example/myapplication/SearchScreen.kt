@@ -36,9 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.theme.LightBackground
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun SearchScreen(
@@ -52,41 +50,62 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
             .statusBarsPadding()
     ) {
-        Text("搜索", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = TextPrimary)
-        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            "搜索",
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
             label = { Text("搜索物品/标签/位置/备注") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp)
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         if (query.isBlank()) {
-            Text("输入关键字开始搜索", color = TextSecondary)
+            Text("输入关键字开始搜索", color = MaterialTheme.colorScheme.onSurfaceVariant)
             return
         }
         if (queryResults.isEmpty()) {
-            Text("没有找到结果", color = TextSecondary)
+            Text("没有找到结果", color = MaterialTheme.colorScheme.onSurfaceVariant)
             return
         }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
             queryResults.forEach { r ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onOpenResult(r) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    shadowElevation = 4.dp
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                    tonalElevation = 1.dp
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(r.itemName, fontWeight = FontWeight.Medium, color = TextPrimary)
-                        Text(r.path, color = TextSecondary, fontSize = 12.sp)
-                        if (!r.note.isNullOrBlank()) Text(r.note, color = TextSecondary, fontSize = 12.sp)
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            r.itemName,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            r.path,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (!r.note.isNullOrBlank()) {
+                            Text(
+                                r.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top=4.dp)
+                            )
+                        }
                     }
                 }
             }

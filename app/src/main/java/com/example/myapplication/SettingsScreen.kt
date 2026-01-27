@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,9 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.example.myapplication.ui.theme.LightBackground
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
+import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -95,28 +94,39 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
             .statusBarsPadding()
     ) {
-        Text("设置", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            "设置",
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text("教程与示例", fontWeight = FontWeight.Bold, color = TextPrimary)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "教程与示例",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
                 onClick = onOpenOnboarding,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(100.dp)
             ) { Text("打开教程") }
             OutlinedButton(
                 onClick = {
                     viewModel.addDemoData()
                     Toast.makeText(context, "已添加演示数据", Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(100.dp)
             ) { Text("添加示例") }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -124,48 +134,57 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column {
-                Text("到期提醒", color = TextPrimary, fontWeight = FontWeight.Medium)
-                Text("每天检查临近过期物品", color = TextSecondary, fontSize = 12.sp)
+                Text("到期提醒", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("每天检查临近过期物品", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(
                 checked = settings.remindersEnabled,
                 onCheckedChange = { viewModel.setRemindersEnabled(it) }
             )
         }
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = daysText,
             onValueChange = { daysText = it },
             label = { Text("提前提醒天数（0-30）") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
         )
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
             onClick = { viewModel.setDaysBeforeExpiry(daysText.toIntOrNull() ?: settings.daysBeforeExpiry) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(100.dp)
         ) { Text("保存提醒设置") }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("通知权限（Android 13+）", fontWeight = FontWeight.Bold, color = TextPrimary)
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("通知权限（Android 13+）", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = if (granted) "已授予" else "未授予（将无法弹出系统通知）",
-            color = TextSecondary,
-            fontSize = 12.sp
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
             onClick = { permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(100.dp)
         ) { Text("申请通知权限") }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("备份与恢复", fontWeight = FontWeight.Bold, color = TextPrimary)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("备份与恢复", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
                 onClick = { exportLauncher.launch("myapplication_backup.zip") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(100.dp)
             ) { Text("导出") }
             OutlinedButton(
                 onClick = { importLauncher.launch(arrayOf("application/zip")) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(100.dp)
             ) { Text("导入") }
         }
     }
@@ -173,8 +192,8 @@ fun SettingsScreen(
     if (confirmImport) {
         AlertDialog(
             onDismissRequest = { confirmImport = false },
-            title = { Text("导入备份") },
-            text = { Text("导入会覆盖当前所有数据，确定继续吗？") },
+            title = { Text("导入备份", style = MaterialTheme.typography.titleLarge) },
+            text = { Text("导入会覆盖当前所有数据，确定继续吗？", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -186,10 +205,18 @@ fun SettingsScreen(
                                 launch(Dispatchers.Main) { Toast.makeText(context, "已导入", Toast.LENGTH_SHORT).show() }
                             }
                         }
-                    }
+                    },
+                    shape = RoundedCornerShape(100.dp)
                 ) { Text("确定") }
             },
-            dismissButton = { OutlinedButton(onClick = { confirmImport = false }) { Text("取消") } }
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { confirmImport = false },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }

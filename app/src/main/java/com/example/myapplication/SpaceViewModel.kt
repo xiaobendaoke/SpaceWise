@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -95,6 +97,13 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
     val lists: StateFlow<List<PackingList>> = dao.observeLists()
         .map { list -> list.map { it.toDomain() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val expiringItemsCount: StateFlow<Int> = flow {
+        // 使用一次性计算替代死循环，数据变化时 DAO Flow 会自动刷新
+        val now = System.currentTimeMillis()
+        val sevenDaysLater = now + TimeUnit.DAYS.toMillis(7)
+        emitAll(dao.observeExpiringItemsCount(now, sevenDaysLater))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     fun observeListItems(listId: String): Flow<List<PackingListItem>> {
         return dao.observeListItems(listId).map { it.map { row -> row.toDomain() } }

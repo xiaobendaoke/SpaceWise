@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -61,6 +63,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -81,9 +84,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.theme.LightBackground
-import com.example.myapplication.ui.theme.TextPrimary
-import com.example.myapplication.ui.theme.TextSecondary
 import kotlin.math.roundToInt
 
 @Composable
@@ -117,13 +117,12 @@ fun SpaceDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 16.dp)
+            .statusBarsPadding()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -131,21 +130,20 @@ fun SpaceDetailScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "返回"
+                        contentDescription = "返回",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Column {
                     Text(
                         text = resolvedSpace.name,
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = TextPrimary
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "${resolvedSpace.spots.size} 个空间",
-                        color = TextSecondary,
-                        fontSize = 14.sp
+                        text = "${resolvedSpace.spots.size} 个位置",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -154,58 +152,83 @@ fun SpaceDetailScreen(
                     newSpotName = ""
                     showAddSpot = true
                 },
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(100.dp)
             ) {
-                Icon(imageVector = Icons.Filled.Add, contentDescription = null)
+                Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(6.dp))
-                Text("添加空间")
+                Text("添加位置")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFFDFBF6))
+                .height(360.dp) // Slightly taller map
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    clip = false,
+                    ambientColor = Color(0x308D7B68),
+                    spotColor = Color(0x308D7B68)
+                )
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surface) // Paper-like background
                 .onSizeChanged { mapSize = it }
-                .padding(12.dp)
         ) {
             val coverMaxPx = with(LocalDensity.current) { 1200.dp.roundToPx() }
-            val coverBitmap = remember(resolvedSpace.coverImagePath) {
-                resolvedSpace.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
+            // 异步加载封面图片
+            var coverBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+            LaunchedEffect(resolvedSpace.coverImagePath) {
+                coverBitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    resolvedSpace.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
+                }
             }
-            if (coverBitmap != null) {
+            
+            // Map Background Image
+            val bitmap = coverBitmap
+            if (bitmap != null) {
                 androidx.compose.foundation.Image(
-                    bitmap = coverBitmap.asImageBitmap(),
+                    bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.9f // Slightly faded for "paper map" feel
                 )
+            } else {
+                 Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                 ) {
+                     Text("暂无平面图", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                 }
             }
 
             val boxWidthPx = constraints.maxWidth.toFloat()
             val boxHeightPx = constraints.maxHeight.toFloat()
-            val markerSize = with(LocalDensity.current) { 44.dp.toPx() }
-            val labelOffset = with(LocalDensity.current) { 54.dp.toPx() }
+            val markerSize = with(LocalDensity.current) { 56.dp.toPx() } // Larger touch target
+            val labelOffset = with(LocalDensity.current) { 60.dp.toPx() }
 
             resolvedSpace.spots.forEach { spot ->
                 key(spot.id) {
                     val latestPosition by rememberUpdatedState(spot.position)
                     val draggingThis = isDraggingSpot && draggingSpotId == spot.id
-
+                    
+                    // "Sticky Note" Marker
                     Box(
                         modifier = Modifier
-                            .offset { IntOffset(spot.position.x.roundToInt(), spot.position.y.roundToInt()) }
-                            .size(48.dp)
-                            .clip(CircleShape)
+                            .offset {
+                                val pos = if (draggingThis) currentSpotPosition else spot.position
+                                IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
+                            }
+                            .size(56.dp)
+                            // Removed shadow, background, and border to match "no box" request
                             .graphicsLayer(
-                                scaleX = if (draggingThis) 1.1f else 1f,
-                                scaleY = if (draggingThis) 1.1f else 1f,
+                                scaleX = if (draggingThis) 1.2f else 1f,
+                                scaleY = if (draggingThis) 1.2f else 1f,
+                                translationY = if (draggingThis) -30f else 0f // Lift up slightly when dragging
                             )
-                            .background(if (draggingThis) Color(0xFFD8C8B6) else Color(0xFFE4D5C5))
                             .pointerInput(resolvedSpace.id, spot.id) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -224,14 +247,16 @@ fun SpaceDetailScreen(
                                                     (currentSpotPosition.x + delta.x).coerceIn(0f, boxWidthPx - markerSize),
                                                     (currentSpotPosition.y + delta.y).coerceIn(0f, boxHeightPx - markerSize)
                                                 )
-                                                viewModel.updateSpotPosition(
-                                                    spaceId = resolvedSpace.id,
-                                                    spotId = spot.id,
-                                                    newPosition = currentSpotPosition
-                                                )
+                                                // 拖拽过程中不写入数据库，仅更新本地状态
                                             }
                                         }
 
+                                        // 拖拽结束后才保存到数据库，减少 I/O 操作
+                                        viewModel.updateSpotPosition(
+                                            spaceId = resolvedSpace.id,
+                                            spotId = spot.id,
+                                            newPosition = currentSpotPosition
+                                        )
                                         isDraggingSpot = false
                                         draggingSpotId = null
                                         lastDragEndTime = System.currentTimeMillis()
@@ -245,20 +270,39 @@ fun SpaceDetailScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.LocationOn,
-                            contentDescription = spot.name,
-                            tint = MaterialTheme.colorScheme.primary
+                        // Sticker Content 
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                             // Maybe just an icon? Or letter?
+                             // Icon is clearer.
+                            Icon(
+                                imageVector = Icons.Filled.LocationOn,
+                                contentDescription = spot.name,
+                                tint = if (draggingThis) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary, // Color change on drag
+                                modifier = Modifier.size(48.dp) // Larger icon since no box
+                            )
+                        }
+                    }
+                    
+                    // Label outside the sticky note
+                    Box(
+                        modifier = Modifier
+                            .offset { 
+                                val pos = if (draggingThis) currentSpotPosition else spot.position
+                                IntOffset(
+                                    (pos.x + markerSize/2 - 50 ).roundToInt(), // Centered approx 
+                                    (pos.y + labelOffset).roundToInt()
+                                ) 
+                             }
+                             .background(MaterialTheme.colorScheme.surface.copy(alpha=0.8f), RoundedCornerShape(4.dp))
+                             .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                         Text(
+                            text = spot.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1
                         )
                     }
-                    Text(
-                        text = spot.name,
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        modifier = Modifier.offset {
-                            IntOffset(spot.position.x.roundToInt(), (spot.position.y + labelOffset).roundToInt())
-                        }
-                    )
                 }
             }
         }
@@ -268,55 +312,61 @@ fun SpaceDetailScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "空间",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = TextPrimary,
-                modifier = Modifier.padding(bottom = 8.dp)
+                text = "位置列表",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
 
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp), // Increased spacing
                 modifier = Modifier.fillMaxWidth()
             ) {
                 resolvedSpace.spots.forEach { spot ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .shadow(
+                                elevation = 2.dp,
+                                shape = RoundedCornerShape(20.dp),
+                                clip = false,
+                                ambientColor = Color(0x208D7B68),
+                                spotColor = Color(0x208D7B68)
+                            )
                             .clickable { activeSpotId = spot.id },
-                        shape = RoundedCornerShape(18.dp),
-                        color = Color.White,
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 1.dp
                     ) {
                         Row(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = spot.name,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextPrimary,
-                                    fontSize = 16.sp
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "${spot.items.size} 个物品",
-                                    color = TextSecondary,
-                                    fontSize = 13.sp
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(20.dp)
+                                    .size(18.dp)
                                     .rotate(180f),
-                                tint = TextSecondary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -328,12 +378,14 @@ fun SpaceDetailScreen(
     if (showAddSpot) {
         AlertDialog(
             onDismissRequest = { showAddSpot = false },
-            title = { Text("添加空间") },
+            title = { Text("添加位置", style = MaterialTheme.typography.titleLarge) },
             text = {
                 OutlinedTextField(
                     value = newSpotName,
                     onValueChange = { newSpotName = it },
-                    label = { Text("空间名称") }
+                    label = { Text("位置名称") },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
@@ -349,12 +401,18 @@ fun SpaceDetailScreen(
                             newSpotName = ""
                             showAddSpot = false
                         }
-                    }
+                    },
+                    shape = RoundedCornerShape(100.dp)
                 ) { Text("确定") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showAddSpot = false }) { Text("取消") }
-            }
+                OutlinedButton(
+                    onClick = { showAddSpot = false },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 

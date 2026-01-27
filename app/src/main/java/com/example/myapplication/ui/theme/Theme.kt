@@ -9,19 +9,27 @@ package com.example.myapplication.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
-    primary = HomePrimary,
-    secondary = HomeSecondary,
-    tertiary = HomeTertiary,
-    background = LightBackground,
-    surface = LightSurface,
-    onPrimary = LightSurface,
-    onSecondary = TextPrimary,
-    onTertiary = TextPrimary,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    outline = LightOutline
+    primary = WarmCoffee,
+    onPrimary = Color.White,
+    secondary = Oatmeal,
+    onSecondary = DarkEarth,
+    tertiary = SageGreen,
+    onTertiary = Color.White,
+    background = Cream,
+    onBackground = DarkEarth,
+    surface = SoftWhite,
+    onSurface = DarkEarth,
+    surfaceVariant = Oatmeal,
+    onSurfaceVariant = MutedEarth,
+    primaryContainer = WarmCoffeeContainer,
+    onPrimaryContainer = DarkEarth,
+    secondaryContainer = SageGreenContainer,
+    onSecondaryContainer = DarkEarth,
+    outline = CoffeeMilk,
+    outlineVariant = Oatmeal
 )
 
 @Composable
