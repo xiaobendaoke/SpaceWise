@@ -1,0 +1,85 @@
+package com.example.myapplication
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.myapplication.ui.theme.LightBackground
+import com.example.myapplication.ui.theme.TextPrimary
+import com.example.myapplication.ui.theme.TextSecondary
+
+@Composable
+fun SearchScreen(
+    viewModel: SpaceViewModel,
+    onOpenResult: (ItemSearchResult) -> Unit,
+) {
+    val queryResults by viewModel.searchResults.collectAsState()
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(query) { viewModel.setSearchQuery(query) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(LightBackground)
+            .padding(20.dp)
+            .statusBarsPadding()
+    ) {
+        Text("搜索", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = TextPrimary)
+        Spacer(modifier = Modifier.height(10.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("搜索物品/标签/位置/备注") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        if (query.isBlank()) {
+            Text("输入关键字开始搜索", color = TextSecondary)
+            return
+        }
+        if (queryResults.isEmpty()) {
+            Text("没有找到结果", color = TextSecondary)
+            return
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            queryResults.forEach { r ->
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenResult(r) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(r.itemName, fontWeight = FontWeight.Medium, color = TextPrimary)
+                        Text(r.path, color = TextSecondary, fontSize = 12.sp)
+                        if (!r.note.isNullOrBlank()) Text(r.note, color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
