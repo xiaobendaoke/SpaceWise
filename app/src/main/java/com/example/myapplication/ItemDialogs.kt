@@ -274,8 +274,8 @@ fun ItemUpsertDialog(
                 onClick = {
                     val finalSpotId = selectedSpotId
                     val finalName = name.trim()
-                    if (finalSpotId == null || finalName.isBlank()) {
-                        Toast.makeText(context, "请填写物品名称", Toast.LENGTH_SHORT).show()
+                    if (finalSpotId == null || finalName.isBlank() || imagePath == null) {
+                        Toast.makeText(context, "请填写物品名称并上传图片", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     val expiryEpoch = SpaceViewModel.parseDateToEpochMs(expiry)
@@ -296,12 +296,17 @@ fun ItemUpsertDialog(
                         )
                     } else {
                         val item = initialItem ?: return@Button
-                        viewModel.renameItem(spaceId, finalSpotId, item.id, finalName)
-                        viewModel.updateItemNote(item.id, note)
-                        viewModel.updateItemExpiry(item.id, expiryEpoch)
-                        viewModel.updateItemQuantities(item.id, current, min)
-                        viewModel.updateItemImage(spaceId, finalSpotId, item.id, imagePath)
-                        viewModel.setItemTags(item.id, selectedTagIds.toList())
+                        viewModel.updateItemFull(
+                            itemId = item.id,
+                            name = finalName,
+                            note = note,
+                            expiryDateEpochMs = expiryEpoch,
+                            currentQuantity = current,
+                            minQuantity = min,
+                            imagePath = imagePath,
+                            tagIds = selectedTagIds.toList(),
+                            spotId = finalSpotId
+                        )
                     }
                     onDismiss()
                 }

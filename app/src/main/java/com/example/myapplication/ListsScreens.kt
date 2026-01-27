@@ -13,6 +13,7 @@ package com.example.myapplication
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,21 +24,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,9 +59,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +75,7 @@ import com.example.myapplication.ui.theme.TextPrimary
 import com.example.myapplication.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListsScreen(
     viewModel: SpaceViewModel,
@@ -66,43 +83,62 @@ fun ListsScreen(
 ) {
     val lists by viewModel.lists.collectAsState()
     var newName by remember { mutableStateOf("") }
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(LightBackground)
-            .padding(20.dp)
-            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("清单", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = TextPrimary)
-            OutlinedButton(onClick = { viewModel.generateRestockList() }) { Text("生成补货") }
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = newName,
-                onValueChange = { newName = it },
-                label = { Text("新清单名称") },
-                modifier = Modifier.weight(1f)
-            )
-            Button(
-                onClick = {
-                    val name = newName.trim()
-                    if (name.isNotBlank()) {
-                        viewModel.createList(name)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "清单",
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "${lists.size} 个清单",
+                    color = TextSecondary,
+                    fontSize = 15.sp
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ActionButton(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    label = "生成补货",
+                    onClick = { viewModel.generateRestockList() }
+                )
+                ActionButton(
+                    icon = Icons.Filled.Add,
+                    label = "新建清单",
+                    onClick = {
                         newName = ""
+                        showSheet = true
                     }
-                },
-                modifier = Modifier.heightIn(min = 56.dp)
-            ) { Text("创建") }
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(12.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (lists.isEmpty()) {
-            Text("暂无清单", color = TextSecondary)
-            return
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            lists.forEach { list ->
+            Text("暂无清单", color = TextSecondary, modifier = Modifier.padding(top = 20.dp))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                lists.forEach { list ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -119,6 +155,52 @@ fun ListsScreen(
         }
     }
 }
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "新建清单",
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = TextPrimary
+                )
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("清单名称") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedButton(
+                    onClick = {
+                        val name = newName.trim()
+                        if (name.isNotBlank()) {
+                            viewModel.createList(name)
+                            newName = ""
+                            showSheet = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text("创建")
+                }
+                Spacer(modifier = Modifier.navigationBarsPadding())
+            }
+        }
+    }
+}
+
 
 @Composable
 fun ListDetailScreen(
@@ -161,6 +243,7 @@ fun ListDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(LightBackground)
+            .verticalScroll(rememberScrollState())
             .padding(20.dp)
             .statusBarsPadding()
     ) {

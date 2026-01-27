@@ -255,6 +255,34 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { updateItem(itemId) { it.copy(imagePath = imagePath) } }
     }
 
+    fun updateItemFull(
+        itemId: String,
+        name: String,
+        note: String?,
+        expiryDateEpochMs: Long?,
+        currentQuantity: Int,
+        minQuantity: Int,
+        imagePath: String?,
+        tagIds: List<String>,
+        spotId: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = dao.getItem(itemId) ?: return@launch
+            val updated = current.copy(
+                name = name,
+                note = note,
+                expiryDateEpochMs = expiryDateEpochMs,
+                currentQuantity = currentQuantity,
+                minQuantity = minQuantity,
+                imagePath = imagePath,
+                spotId = spotId,
+                updatedAt = System.currentTimeMillis()
+            )
+            dao.updateItem(updated)
+            repo.setTagsForItem(itemId, tagIds)
+        }
+    }
+
     fun updateItemExpiry(itemId: String, expiryDateEpochMs: Long?) {
         viewModelScope.launch { updateItem(itemId) { it.copy(expiryDateEpochMs = expiryDateEpochMs) } }
     }
