@@ -1,3 +1,12 @@
+/**
+ * 示例封面图资源。
+ *
+ * 职责：
+ * - 提供应用预置的空间示例图案。
+ *
+ * 上层用途：
+ * - 在应用首次启动或创建示例数据时生成默认空间封面。
+ */
 package com.example.myapplication
 
 import android.graphics.Bitmap

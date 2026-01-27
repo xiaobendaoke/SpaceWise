@@ -1,3 +1,6 @@
+/**
+ * 主题字体类型定义。
+ */
 package com.example.myapplication.ui.theme
 
 import androidx.compose.material3.Typography

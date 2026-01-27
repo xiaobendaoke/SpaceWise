@@ -1,3 +1,6 @@
+/**
+ * 主题颜色定义。
+ */
 package com.example.myapplication.ui.theme
 
 import androidx.compose.ui.graphics.Color

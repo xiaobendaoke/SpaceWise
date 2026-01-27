@@ -1,3 +1,12 @@
+/**
+ * 后台任务调度中心。
+ *
+ * 职责：
+ * - 调度并管理全应用的后台任务（如定期过期检查）。
+ *
+ * 上层用途：
+ * - 在 `MainActivity` 启动时初始化，确保任务调度按计划开启。
+ */
 package com.example.myapplication.work
 
 import android.content.Context

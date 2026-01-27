@@ -1,3 +1,13 @@
+/**
+ * 系统通知管理器。
+ *
+ * 职责：
+ * - 声明通知渠道。
+ * - 构建并发送本地提醒通知。
+ *
+ * 上层用途：
+ * - 被 `ExpiryCheckWorker` 调用，在发现即将过期物品时提醒用户。
+ */
 package com.example.myapplication.notifications
 
 import android.app.NotificationChannel

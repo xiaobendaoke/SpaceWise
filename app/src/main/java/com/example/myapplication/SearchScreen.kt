@@ -1,3 +1,13 @@
+/**
+ * 全局搜索页面。
+ *
+ * 职责：
+ * - 提供关键词搜索界面，支持搜索物品、空间、点位和标签。
+ * - 展示搜索结果并支持跳转。
+ *
+ * 上层用途：
+ * - 作为应用的核心导航入口之一，在底部导航栏中访问。
+ */
 package com.example.myapplication
 
 import androidx.compose.foundation.background

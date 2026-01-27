@@ -1,3 +1,13 @@
+/**
+ * 设置中心页面。
+ *
+ * 职责：
+ * - 管理用户偏好（如提醒设置）。
+ * - 提供数据备份、还原、清空等管理功能。
+ *
+ * 上层用途：
+ * - 作为应用的配置中心，在底部导航栏中访问。
+ */
 package com.example.myapplication
 
 import android.Manifest

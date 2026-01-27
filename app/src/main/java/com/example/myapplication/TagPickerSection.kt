@@ -1,3 +1,13 @@
+/**
+ * 标签选择与管理组件。
+ *
+ * 职责：
+ * - 提供标签的级联选择界面。
+ * - 提供标签的增删改管理入口。
+ *
+ * 上层用途：
+ * - 被 `ItemDialogs` 等组件引用，用于在创建或编辑物品时分配标签。
+ */
 package com.example.myapplication
 
 import androidx.compose.foundation.clickable
@@ -38,7 +48,9 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.TextPrimary
 import com.example.myapplication.ui.theme.TextSecondary
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,19 +78,43 @@ fun TagPickerSection(
             singleLine = true
         )
 
-        val scrollState = rememberScrollState()
         Column(
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 240.dp)
-                .verticalScroll(scrollState)
+            modifier = Modifier.fillMaxWidth()
         ) {
             val filtered = if (query.isBlank()) {
                 allTags
             } else {
                 val q = query.trim()
                 allTags.filter { it.name.contains(q, ignoreCase = true) }
+            }
+
+            // Quick add if query doesn't exactly match any existing tag
+            val exactMatch = filtered.any { it.name.equals(query.trim(), ignoreCase = true) }
+            if (query.isNotBlank() && !exactMatch) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable {
+                            onCreateTag(query.trim(), null)
+                            query = ""
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = "新建标签 \"${query.trim()}\"",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
             if (filtered.isEmpty()) {
                 Text(text = "暂无标签", color = TextSecondary, fontSize = 12.sp)

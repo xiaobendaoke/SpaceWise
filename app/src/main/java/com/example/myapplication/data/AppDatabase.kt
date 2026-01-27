@@ -1,3 +1,14 @@
+/**
+ * Room 数据库定义。
+ *
+ * 职责：
+ * - 定义数据库实体和版本。
+ * - 提供数据库实例化的单例方法。
+ * - 暴露 `AppDao` 接口。
+ *
+ * 上层用途：
+ * - `SpaceViewModel` 和其他底层组件通过它获取数据操作入口。
+ */
 package com.example.myapplication.data
 
 import android.content.Context

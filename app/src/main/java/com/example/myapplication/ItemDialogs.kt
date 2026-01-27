@@ -1,3 +1,13 @@
+/**
+ * 物品相关弹窗组件。
+ *
+ * 职责：
+ * - 提供添加、编辑、详情展示等物品相关的对话框。
+ * - 集成图片选择、日期选择和标签选择逻辑。
+ *
+ * 上层用途：
+ * - 被 `SpaceDetailScreen` 等页面调用，用于处理物品的交互操作。
+ */
 package com.example.myapplication
 
 import android.widget.Toast
@@ -9,10 +19,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -46,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +69,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.myapplication.ui.theme.TextPrimary
 import com.example.myapplication.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +102,7 @@ fun ItemUpsertDialog(
 
     var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var ocrBusy by remember { mutableStateOf(false) }
+    var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
 
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -116,7 +135,10 @@ fun ItemUpsertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (isEdit) "编辑物品" else "添加物品") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 if (!isEdit && spots.size > 1) {
                     SimpleSpotPicker(
                         spots = spots,
@@ -174,9 +196,10 @@ fun ItemUpsertDialog(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(180.dp)
+                            .clickable { fullscreenImagePath = imagePath },
                         shape = RoundedCornerShape(14.dp),
-                        color = androidx.compose.ui.graphics.Color(0xFFF0EFEA)
+                        color = Color(0xFFF0EFEA)
                     ) {
                         Image(
                             bitmap = preview.asImageBitmap(),
@@ -286,6 +309,10 @@ fun ItemUpsertDialog(
         },
         dismissButton = { OutlinedButton(onClick = onDismiss) { Text("取消") } }
     )
+
+    fullscreenImagePath?.let { path ->
+        FullScreenImageDialog(imagePath = path, onDismiss = { fullscreenImagePath = null })
+    }
 }
 
 @Composable
@@ -304,7 +331,10 @@ fun BatchAddDialog(
         onDismissRequest = onDismiss,
         title = { Text("批量添加") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text("每行一个物品名称", color = TextSecondary, fontSize = 12.sp)
                 OutlinedTextField(
                     value = text,
@@ -354,6 +384,7 @@ fun SpotItemsDialog(
     var showAdd by remember { mutableStateOf(false) }
     var showBatch by remember { mutableStateOf(false) }
     var editingItemId by remember { mutableStateOf<String?>(null) }
+    var fullscreenImagePath by remember { mutableStateOf<String?>(null) }
     val editingItem = editingItemId?.let { id -> spot.items.firstOrNull { it.id == id } }
     val context = LocalContext.current
     val thumbSizePx = with(LocalDensity.current) { 48.dp.roundToPx() }
@@ -376,7 +407,10 @@ fun SpotItemsDialog(
                     LazyColumn(
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .heightIn(max = 400.dp)
                     ) {
                         itemsIndexed(spot.items, key = { _, item -> item.id }) { _, item ->
                             val thumb = remember(item.imagePath) {
@@ -403,9 +437,11 @@ fun SpotItemsDialog(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(
-                                        modifier = Modifier.size(44.dp),
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clickable { fullscreenImagePath = item.imagePath },
                                         shape = RoundedCornerShape(12.dp),
-                                        color = androidx.compose.ui.graphics.Color(0xFFF0EFEA)
+                                        color = Color(0xFFF0EFEA)
                                     ) {
                                         if (thumb != null) {
                                             Image(
@@ -481,6 +517,10 @@ fun SpotItemsDialog(
         confirmButton = { OutlinedButton(onClick = onDismiss) { Text("关闭") } }
     )
 
+    fullscreenImagePath?.let { path ->
+        FullScreenImageDialog(imagePath = path, onDismiss = { fullscreenImagePath = null })
+    }
+
     if (showAdd) {
         ItemUpsertDialog(
             viewModel = viewModel,
@@ -536,6 +576,40 @@ fun SimpleSpotPicker(
                     text = spot.name,
                     modifier = Modifier.padding(10.dp),
                     color = TextPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FullScreenImageDialog(
+    imagePath: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    // Load with a large enough max dimension for full screen clarity
+    val bitmap = remember(imagePath) { loadBitmapFromInternalPath(context, imagePath, 2000) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.9f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(bitmap.width.toFloat() / bitmap.height.toFloat())
+                        .clickable(enabled = false) { } // Prevent click-through closing
                 )
             }
         }

@@ -1,3 +1,9 @@
+/**
+ * Compose 主题配置。
+ *
+ * 职责：
+ * - 配置 Material 3 主题（颜色、字体等）。
+ */
 package com.example.myapplication.ui.theme
 
 import androidx.compose.material3.MaterialTheme

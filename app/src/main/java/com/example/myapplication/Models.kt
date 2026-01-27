@@ -1,3 +1,13 @@
+/**
+ * 领域模型定义。
+ *
+ * 职责：
+ * - 定义应用核心概念：`Item`（物品）、`Spot`（点位）、`Tag`（标签）、`Space`（空间）。
+ * - 提供基础的数据封装。
+ *
+ * 上层用途：
+ * - 作为 UI 层展示和业务逻辑处理的统一模型，由 `data/Mappers.kt` 从数据库实体转换而来。
+ */
 package com.example.myapplication
 
 import androidx.compose.ui.geometry.Offset

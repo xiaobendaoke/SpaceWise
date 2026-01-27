@@ -1,3 +1,13 @@
+/**
+ * 空间列表页面。
+ *
+ * 职责：
+ * - 展示所有已创建的空间卡片。
+ * - 处理空间的创建和删除逻辑。
+ *
+ * 上层用途：
+ * - 应用启动后的默认展示页面（首页）。
+ */
 package com.example.myapplication
 
 import android.widget.Toast

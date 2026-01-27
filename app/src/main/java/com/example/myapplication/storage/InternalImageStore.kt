@@ -1,3 +1,13 @@
+/**
+ * 内部图片存储管理器。
+ *
+ * 职责：
+ * - 处理图片的持久化（从拍摄、相册或 Bitmap 保存到内部存储）。
+ * - 管理文件路径和 Uri 转换。
+ *
+ * 上层用途：
+ * - 被 `SpaceViewModel` 调用以保存用户上传或拍摄的封面和物品图片。
+ */
 package com.example.myapplication.storage
 
 import android.content.ContentResolver
@@ -68,6 +78,14 @@ object InternalImageStore {
             }
         } catch (_: Throwable) {
             null
+        }
+    }
+
+    fun delete(context: Context, path: String): Boolean {
+        return try {
+            resolveFile(context, path).delete()
+        } catch (_: Throwable) {
+            false
         }
     }
 }

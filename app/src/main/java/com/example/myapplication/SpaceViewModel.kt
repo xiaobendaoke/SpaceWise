@@ -1,4 +1,18 @@
+/**
+ * 应用的核心业务逻辑处理类（ViewModel）。
+ *
+ * 职责：
+ * - 连接数据层（Room DAO）和 UI 层（Compose Screens）。
+ * - 处理各种用户交互逻辑（增删改查空间、物品、清单、标签等）。
+ * - 管理搜索状态和图片持久化。
+ * - 初始化演示数据和模板。
+ *
+ * 上层用途：
+ * - 被 `MainActivity` 实例化，并作为单一真相来源（Single Source of Truth）提供给所有 UI 页面。
+ */
 package com.example.myapplication
+
+import kotlinx.coroutines.Dispatchers
 
 import android.app.Application
 import android.graphics.Bitmap
@@ -107,7 +121,18 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeSpace(spaceId: String) {
-        viewModelScope.launch { dao.deleteSpace(spaceId) }
+        viewModelScope.launch(Dispatchers.IO) {
+            // Cleanup images
+            val space = dao.getSpace(spaceId)
+            val items = dao.getItemsInSpace(spaceId)
+            
+            space?.coverImagePath?.let { path -> InternalImageStore.delete(getApplication(), path) }
+            items.forEach { item ->
+                item.imagePath?.let { path -> InternalImageStore.delete(getApplication(), path) }
+            }
+
+            dao.deleteSpace(spaceId)
+        }
     }
 
     fun addSpot(spaceId: String, name: String, position: Offset) {
@@ -141,7 +166,14 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeSpot(spaceId: String, spotId: String) {
-        viewModelScope.launch { dao.deleteSpot(spotId) }
+        viewModelScope.launch(Dispatchers.IO) {
+            // Cleanup images for items in this spot
+            val items = dao.getItemsInSpot(spotId)
+            items.forEach { item ->
+                item.imagePath?.let { InternalImageStore.delete(getApplication(), it) }
+            }
+            dao.deleteSpot(spotId)
+        }
     }
 
     fun addItemToSpot(
@@ -243,7 +275,11 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeItem(spaceId: String, spotId: String, itemId: String) {
-        viewModelScope.launch { dao.deleteItem(itemId) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val item = dao.getItem(itemId)
+            item?.imagePath?.let { path -> InternalImageStore.delete(getApplication(), path) }
+            dao.deleteItem(itemId)
+        }
     }
 
     fun addTag(name: String, parentId: String?) {

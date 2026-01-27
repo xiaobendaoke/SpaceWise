@@ -1,3 +1,13 @@
+/**
+ * 数据库持久化实体定义。
+ *
+ * 职责：
+ * - 定义 Room 数据库表结构和关联关系。
+ * - 定义复杂查询的结果行模型。
+ *
+ * 上层用途：
+ * - 供 `AppDao` 使用，用于底层的 SQL 映射和操作。
+ */
 package com.example.myapplication.data
 
 import androidx.room.Embedded

@@ -1,3 +1,12 @@
+/**
+ * OCR 文字识别组件。
+ *
+ * 职责：
+ * - 使用 ML Kit 识别图片中的中文字符。
+ *
+ * 上层用途：
+ * - 在物品编辑页面等场景，帮助用户快速录入物品信息。
+ */
 package com.example.myapplication.ocr
 
 import android.content.Context

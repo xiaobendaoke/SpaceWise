@@ -1,3 +1,12 @@
+/**
+ * 空间模板选择器。
+ *
+ * 职责：
+ * - 展示预设的空间模板（如厨房、书房等）供用户快速选择。
+ *
+ * 上层用途：
+ * - 被 `SpacesScreen` 的创建流程使用，简化用户初始空间的搭建。
+ */
 package com.example.myapplication
 
 import androidx.compose.material3.DropdownMenu

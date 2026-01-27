@@ -1,3 +1,13 @@
+/**
+ * 数据库访问对象（DAO）。
+ *
+ * 职责：
+ * - 定义所有的 SQL 查询操作（增删改查）。
+ * - 使用 `Flow` 提供响应式数据流。
+ *
+ * 上层用途：
+ * - 被 `AppRepository` 和 `SpaceViewModel` 调用以执行具体的数据操作。
+ */
 package com.example.myapplication.data
 
 import androidx.room.Dao
@@ -26,6 +36,9 @@ interface AppDao {
     @Transaction
     @Query("SELECT * FROM spaces WHERE id = :spaceId")
     fun observeSpaceWithSpots(spaceId: String): Flow<List<SpaceWithSpots>>
+
+    @Query("SELECT * FROM spaces WHERE id = :spaceId LIMIT 1")
+    suspend fun getSpace(spaceId: String): SpaceEntity?
 
     @Query("SELECT COUNT(*) FROM spaces")
     suspend fun countSpaces(): Int
@@ -189,6 +202,12 @@ interface AppDao {
 
     @Query("SELECT * FROM items")
     suspend fun listAllItems(): List<ItemEntity>
+
+    @Query("SELECT i.* FROM items i JOIN spots s ON i.spotId = s.id WHERE s.spaceId = :spaceId")
+    suspend fun getItemsInSpace(spaceId: String): List<ItemEntity>
+
+    @Query("SELECT * FROM items WHERE spotId = :spotId")
+    suspend fun getItemsInSpot(spotId: String): List<ItemEntity>
 
     @Query("SELECT * FROM tags")
     suspend fun listAllTags(): List<TagEntity>

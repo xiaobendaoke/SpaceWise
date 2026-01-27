@@ -1,3 +1,12 @@
+/**
+ * 用户设置仓库。
+ *
+ * 职责：
+ * - 基于 DataStore 持久化保存用户的偏好设置。
+ *
+ * 上层用途：
+ * - 被 `SpaceViewModel` 及其它逻辑组件调用，获取个性化配置信息。
+ */
 package com.example.myapplication.settings
 
 import android.content.Context

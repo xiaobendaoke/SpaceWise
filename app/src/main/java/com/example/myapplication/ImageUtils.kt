@@ -1,3 +1,12 @@
+/**
+ * 图片处理工具类。
+ *
+ * 职责：
+ * - 提供加载本地图片的辅助逻辑（如 Coil 转换）。
+ *
+ * 上层用途：
+ * - 被应用内所有通过路径展示图片的 UI 组件使用。
+ */
 package com.example.myapplication
 
 import android.content.Context

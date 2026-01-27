@@ -1,3 +1,12 @@
+/**
+ * 空间模板定义。
+ *
+ * 职责：
+ * - 定义预设的空间布局、点位和标签模板。
+ *
+ * 上层用途：
+ * - 供 `TemplatePicker` 展示及 `SpaceViewModel` 初始化新空间使用。
+ */
 package com.example.myapplication.templates
 
 data class SpaceTemplate(

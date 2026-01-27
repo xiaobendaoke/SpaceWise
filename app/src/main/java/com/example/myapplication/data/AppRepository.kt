@@ -1,3 +1,13 @@
+/**
+ * 数据仓库层。
+ *
+ * 职责：
+ * - 封装跨表的复杂数据库操作（如更新物品标签、清空全部数据）。
+ * - 提供事务支持。
+ *
+ * 上层用途：
+ * - 被 `SpaceViewModel` 调用，简化数据的维护逻辑。
+ */
 package com.example.myapplication.data
 
 import androidx.room.withTransaction

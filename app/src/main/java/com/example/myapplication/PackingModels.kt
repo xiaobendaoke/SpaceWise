@@ -1,3 +1,12 @@
+/**
+ * 清单领域模型定义。
+ *
+ * 职责：
+ * - 定义 `PackingList`（清单）和 `PackingListItem`（清单条目）的数据结构。
+ *
+ * 上层用途：
+ * - 作为清单功能页面的统一业务模型。
+ */
 package com.example.myapplication
 
 data class PackingList(

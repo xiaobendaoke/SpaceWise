@@ -1,3 +1,13 @@
+/**
+ * 备份与还原管理器。
+ *
+ * 职责：
+ * - 将数据库数据与图片打包成 ZIP 导出。
+ * - 从备份 ZIP 中解析并还原数据及图片。
+ *
+ * 上层用途：
+ * - 在设置页面为用户提供数据导出和恢复功能。
+ */
 package com.example.myapplication.backup
 
 import android.content.Context

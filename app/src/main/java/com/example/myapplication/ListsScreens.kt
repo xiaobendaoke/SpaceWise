@@ -1,3 +1,14 @@
+/**
+ * 清单功能页面。
+ *
+ * 职责：
+ * - 展示清单列表（`ListsScreen`）。
+ * - 展现具体清单的条目详情（`ListDetailScreen`）。
+ * - 处理清单的创建、删除及条目勾选状态。
+ *
+ * 上层用途：
+ * - 作为应用的主要功能模块之一，由 `MainActivity` 进行导航。
+ */
 package com.example.myapplication
 
 import androidx.compose.foundation.background

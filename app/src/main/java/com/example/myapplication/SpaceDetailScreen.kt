@@ -1,8 +1,21 @@
+/**
+ * 空间详情/平面图查看页面。
+ *
+ * 职责：
+ * - 展示空间的平面视图分布。
+ * - 支持点位的交互（查看、移动、编辑）。
+ * - 展示点位内的物品清单。
+ *
+ * 上层用途：
+ * - 用户从空间列表进入后的核心交互场景。
+ */
 package com.example.myapplication
 
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -250,64 +263,62 @@ fun SpaceDetailScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "空间",
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = TextPrimary,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        val blockScrollConnection = remember {
-            object : NestedScrollConnection {
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset = available
-            }
-        }
-
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .nestedScroll(blockScrollConnection)
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
         ) {
-            resolvedSpace.spots.forEach { spot ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { activeSpotId = spot.id },
-                    shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
-                    shadowElevation = 6.dp,
-                    tonalElevation = 2.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "空间",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = TextPrimary,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                resolvedSpace.spots.forEach { spot ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { activeSpotId = spot.id },
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.White,
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
                     ) {
-                        Column {
-                            Text(
-                                text = spot.name,
-                                fontWeight = FontWeight.Medium,
-                                color = TextPrimary,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "${spot.items.size} 个物品",
-                                color = TextSecondary,
-                                fontSize = 13.sp
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = spot.name,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "${spot.items.size} 个物品",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .rotate(180f),
+                                tint = TextSecondary
                             )
                         }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(20.dp)
-                                .rotate(180f),
-                            tint = TextSecondary
-                        )
                     }
                 }
             }

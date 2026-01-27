@@ -1,3 +1,14 @@
+/**
+ * 应用主入口。
+ *
+ * 职责：
+ * - 初始化应用导航（NavHost）。
+ * - 管理全局 UI 状态（如底部导航栏的显示/隐藏）。
+ * - 协调不同功能页面的切换（空间、搜索、清单、设置、引导页）。
+ *
+ * 上层用途：
+ * - 整个应用的运行起点，持有 `SpaceViewModel` 并分发给各个 Screen 组件。
+ */
 package com.example.myapplication
 
 import android.net.Uri

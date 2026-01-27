@@ -1,3 +1,12 @@
+/**
+ * 数据转换层（Mappers）。
+ *
+ * 职责：
+ * - 实现数据库实体（Entities）与领域模型（Models）之间的互转逻辑。
+ *
+ * 上层用途：
+ * - 被 `AppDao` 或 `SpaceViewModel` 调用，确保 UI 层不直接依赖底层数据库结构。
+ */
 package com.example.myapplication.data
 
 import androidx.compose.ui.geometry.Offset

@@ -1,3 +1,13 @@
+/**
+ * 过期检查后台执行器。
+ *
+ * 职责：
+ * - 定期查询即将过期的物品。
+ * - 触发系统通知提醒用户。
+ *
+ * 上层用途：
+ * - 由 `WorkScheduler` 调度运行。
+ */
 package com.example.myapplication.work
 
 import android.content.Context

@@ -1,3 +1,12 @@
+/**
+ * 引导页/欢迎页。
+ *
+ * 职责：
+ * - 为新用户提供功能介绍和初始化选项（如导入演示数据）。
+ *
+ * 上层用途：
+ * - 在应用首次启动或用户手动进入时通过 `MainActivity` 导航展示。
+ */
 package com.example.myapplication
 
 import androidx.compose.animation.core.LinearEasing
