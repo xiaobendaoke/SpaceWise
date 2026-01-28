@@ -44,7 +44,7 @@ class ExpiryCheckWorker(
         }
 
         val preview = expiring.take(5).joinToString("\n") { row ->
-            "${row.spaceName} > ${row.spotName}：${row.itemName}"
+            "${row.locationName} > ${row.folderName}：${row.itemName}"
         }
 
         Notifications.showExpiryNotification(
@@ -56,4 +56,3 @@ class ExpiryCheckWorker(
         return Result.success()
     }
 }
-

@@ -18,15 +18,15 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        SpaceEntity::class,
-        SpotEntity::class,
+        LocationEntity::class,
+        FolderEntity::class,
         ItemEntity::class,
         TagEntity::class,
         ItemTagCrossRef::class,
         PackingListEntity::class,
         PackingListItemEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,7 +42,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "myapplication.db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()  // 销毁性迁移，重新开始
+                    .build()
                 INSTANCE = instance
                 instance
             }

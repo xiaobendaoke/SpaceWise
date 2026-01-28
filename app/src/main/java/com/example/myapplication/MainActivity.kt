@@ -4,7 +4,7 @@
  * 职责：
  * - 初始化应用导航（NavHost）。
  * - 管理全局 UI 状态（如底部导航栏的显示/隐藏）。
- * - 协调不同功能页面的切换（空间、搜索、清单、设置、引导页）。
+ * - 协调不同功能页面的切换（场所、搜索、清单、设置、引导页）。
  *
  * 上层用途：
  * - 整个应用的运行起点，持有 `SpaceViewModel` 并分发给各个 Screen 组件。
@@ -73,7 +73,12 @@ fun MainApp() {
     val settings by viewModel.settings.collectAsState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute == "spaces" || currentRoute == "search" || currentRoute == "lists" || currentRoute == "settings"
+    
+    // 判断是否显示底部导航栏
+    val showBottomBar = currentRoute == "locations" || 
+                       currentRoute == "search" || 
+                       currentRoute == "lists" || 
+                       currentRoute == "settings"
 
     var suppressOnboardingUntil by remember { mutableLongStateOf(0L) }
     var wasOnboarding by remember { mutableStateOf(false) }
@@ -98,10 +103,10 @@ fun MainApp() {
             if (showBottomBar) {
                 NavigationBar {
                     NavigationBarItem(
-                        selected = currentRoute == "spaces",
-                        onClick = { navController.navigate("spaces") { launchSingleTop = true } },
+                        selected = currentRoute == "locations",
+                        onClick = { navController.navigate("locations") { launchSingleTop = true } },
                         icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                        label = { Text("空间") }
+                        label = { Text("场所") }
                     )
                     NavigationBarItem(
                         selected = currentRoute == "search",
@@ -127,48 +132,106 @@ fun MainApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "spaces",
+            startDestination = "locations",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("spaces") {
-                SpacesScreen(
+            // 场所列表页面（首页）
+            composable("locations") {
+                LocationsScreen(
                     viewModel = viewModel,
-                    onSpaceClick = { id -> navController.navigate("space_detail/$id") }
+                    onLocationClick = { locationId -> 
+                        navController.navigate("folder_browser/$locationId") 
+                    }
                 )
             }
+            
+            // 文件夹浏览器（场所根目录）
+            composable(
+                route = "folder_browser/{locationId}",
+                arguments = listOf(navArgument("locationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val locationId = backStackEntry.arguments?.getString("locationId") ?: ""
+                FolderBrowserScreen(
+                    viewModel = viewModel,
+                    locationId = locationId,
+                    folderId = null,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToFolder = { folderId ->
+                        navController.navigate("folder_browser/$locationId/$folderId")
+                    },
+                    onOpenItem = { item ->
+                        // 物品详情已在 FolderBrowserScreen 内部处理
+                    }
+                )
+            }
+            
+            // 文件夹浏览器（子文件夹）
+            composable(
+                route = "folder_browser/{locationId}/{folderId}",
+                arguments = listOf(
+                    navArgument("locationId") { type = NavType.StringType },
+                    navArgument("folderId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val locationId = backStackEntry.arguments?.getString("locationId") ?: ""
+                val folderId = backStackEntry.arguments?.getString("folderId")
+                FolderBrowserScreen(
+                    viewModel = viewModel,
+                    locationId = locationId,
+                    folderId = folderId,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToFolder = { newFolderId ->
+                        navController.navigate("folder_browser/$locationId/$newFolderId")
+                    },
+                    onOpenItem = { item ->
+                        // 物品详情已在 FolderBrowserScreen 内部处理
+                    }
+                )
+            }
+            
+            // 搜索页面
             composable("search") {
                 SearchScreen(
                     viewModel = viewModel,
-                    onOpenResult = { r ->
+                    onOpenResult = { result ->
+                        // 导航到物品所在的文件夹
                         navController.navigate(
-                            "space_detail/${Uri.encode(r.spaceId)}?spotId=${Uri.encode(r.spotId)}&itemId=${Uri.encode(r.itemId)}"
+                            "folder_browser/${Uri.encode(result.locationId)}/${Uri.encode(result.folderId)}"
                         )
                     }
                 )
             }
+            
+            // 清单列表页面
             composable("lists") {
                 ListsScreen(
                     viewModel = viewModel,
                     onOpenList = { listId -> navController.navigate("list_detail/$listId") }
                 )
             }
+            
+            // 设置页面
             composable("settings") {
                 SettingsScreen(
                     viewModel = viewModel,
                     onOpenOnboarding = { navController.navigate("onboarding") { launchSingleTop = true } }
                 )
             }
+            
+            // 引导页面
             composable("onboarding") {
                 OnboardingScreen(
                     viewModel = viewModel,
                     onFinish = {
-                        navController.navigate("spaces") {
+                        navController.navigate("locations") {
                             popUpTo("onboarding") { inclusive = true }
                             launchSingleTop = true
                         }
                     }
                 )
             }
+            
+            // 清单详情页面
             composable(
                 route = "list_detail/{listId}",
                 arguments = listOf(navArgument("listId") { type = NavType.StringType })
@@ -176,22 +239,6 @@ fun MainApp() {
                 ListDetailScreen(
                     viewModel = viewModel,
                     listId = it.arguments?.getString("listId") ?: "",
-                    onBack = { navController.popBackStack() }
-                )
-            }
-            composable(
-                route = "space_detail/{spaceId}?spotId={spotId}&itemId={itemId}",
-                arguments = listOf(
-                    navArgument("spaceId") { type = NavType.StringType },
-                    navArgument("spotId") { type = NavType.StringType; nullable = true; defaultValue = null },
-                    navArgument("itemId") { type = NavType.StringType; nullable = true; defaultValue = null },
-                )
-            ) {
-                SpaceDetailScreen(
-                    viewModel = viewModel,
-                    spaceId = it.arguments?.getString("spaceId") ?: "",
-                    initialSpotId = it.arguments?.getString("spotId"),
-                    highlightItemId = it.arguments?.getString("itemId"),
                     onBack = { navController.popBackStack() }
                 )
             }

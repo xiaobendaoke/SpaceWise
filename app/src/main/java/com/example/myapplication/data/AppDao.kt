@@ -20,49 +20,94 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppDao {
+
+    // ==================== 场所 (Location) ====================
+
     @Query(
         """
-        SELECT s.id AS id, s.name AS name, s.coverImagePath AS coverImagePath,
-               COUNT(i.id) AS itemCount
-        FROM spaces s
-        LEFT JOIN spots sp ON sp.spaceId = s.id
-        LEFT JOIN items i ON i.spotId = sp.id
-        GROUP BY s.id
-        ORDER BY s.createdAt DESC
+        SELECT l.id, l.name, l.icon, l.coverImagePath,
+               (SELECT COUNT(*) FROM folders f WHERE f.locationId = l.id) AS folderCount,
+               (SELECT COUNT(*) FROM items i 
+                JOIN folders f2 ON i.folderId = f2.id 
+                WHERE f2.locationId = l.id) AS itemCount
+        FROM locations l
+        ORDER BY l.sortOrder ASC, l.createdAt DESC
         """
     )
-    fun observeSpaceSummaries(): Flow<List<SpaceSummaryRow>>
+    fun observeLocationSummaries(): Flow<List<LocationSummaryRow>>
 
-    @Transaction
-    @Query("SELECT * FROM spaces WHERE id = :spaceId")
-    fun observeSpaceWithSpots(spaceId: String): Flow<List<SpaceWithSpots>>
+    @Query("SELECT * FROM locations WHERE id = :locationId LIMIT 1")
+    suspend fun getLocation(locationId: String): LocationEntity?
 
-    @Query("SELECT * FROM spaces WHERE id = :spaceId LIMIT 1")
-    suspend fun getSpace(spaceId: String): SpaceEntity?
-
-    @Query("SELECT COUNT(*) FROM spaces")
-    suspend fun countSpaces(): Int
+    @Query("SELECT COUNT(*) FROM locations")
+    suspend fun countLocations(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertSpace(space: SpaceEntity): Long
+    suspend fun upsertLocation(location: LocationEntity): Long
 
-    @Query("DELETE FROM spaces WHERE id = :spaceId")
-    suspend fun deleteSpace(spaceId: String): Int
+    @Query("DELETE FROM locations WHERE id = :locationId")
+    suspend fun deleteLocation(locationId: String): Int
+
+    @Query("SELECT * FROM locations ORDER BY sortOrder ASC, createdAt DESC")
+    suspend fun listAllLocations(): List<LocationEntity>
+
+    // ==================== 文件夹 (Folder) ====================
+
+    @Query(
+        """
+        SELECT f.id, f.locationId, f.parentId, f.name, f.icon, f.coverImagePath, 
+               f.enableMapView, f.mapX, f.mapY,
+               (SELECT COUNT(*) FROM folders sub WHERE sub.parentId = f.id) AS subFolderCount,
+               (SELECT COUNT(*) FROM items i WHERE i.folderId = f.id) AS itemCount
+        FROM folders f
+        WHERE f.locationId = :locationId AND f.parentId IS :parentId
+        ORDER BY f.sortOrder ASC, f.createdAt DESC
+        """
+    )
+    fun observeFoldersByParent(locationId: String, parentId: String?): Flow<List<FolderSummaryRow>>
+
+    @Query(
+        """
+        SELECT f.id, f.locationId, f.parentId, f.name, f.icon, f.coverImagePath, 
+               f.enableMapView, f.mapX, f.mapY,
+               (SELECT COUNT(*) FROM folders sub WHERE sub.parentId = f.id) AS subFolderCount,
+               (SELECT COUNT(*) FROM items i WHERE i.folderId = f.id) AS itemCount
+        FROM folders f
+        WHERE f.id = :folderId
+        """
+    )
+    fun observeFolder(folderId: String): Flow<FolderSummaryRow?>
+
+    @Query("SELECT * FROM folders WHERE id = :folderId LIMIT 1")
+    suspend fun getFolder(folderId: String): FolderEntity?
+
+    @Query("SELECT * FROM folders WHERE locationId = :locationId AND parentId IS :parentId ORDER BY sortOrder ASC, createdAt DESC")
+    suspend fun listFoldersByParent(locationId: String, parentId: String?): List<FolderEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertSpots(spots: List<SpotEntity>): List<Long>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertSpot(spot: SpotEntity): Long
+    suspend fun upsertFolder(folder: FolderEntity): Long
 
     @Update
-    suspend fun updateSpot(spot: SpotEntity): Int
+    suspend fun updateFolder(folder: FolderEntity): Int
 
-    @Query("SELECT * FROM spots WHERE id = :spotId LIMIT 1")
-    suspend fun getSpot(spotId: String): SpotEntity?
+    @Query("DELETE FROM folders WHERE id = :folderId")
+    suspend fun deleteFolder(folderId: String): Int
 
-    @Query("DELETE FROM spots WHERE id = :spotId")
-    suspend fun deleteSpot(spotId: String): Int
+    @Query("SELECT * FROM folders")
+    suspend fun listAllFolders(): List<FolderEntity>
+
+    @Query("SELECT * FROM folders WHERE locationId = :locationId")
+    suspend fun listFoldersInLocation(locationId: String): List<FolderEntity>
+
+    @Transaction
+    @Query("SELECT * FROM folders WHERE id = :folderId")
+    fun observeFolderWithItems(folderId: String): Flow<FolderWithItems?>
+
+    // ==================== 物品 (Item) ====================
+
+    @Transaction
+    @Query("SELECT * FROM items WHERE folderId = :folderId ORDER BY updatedAt DESC")
+    fun observeItemsInFolder(folderId: String): Flow<List<ItemWithTags>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertItem(item: ItemEntity): Long
@@ -75,6 +120,14 @@ interface AppDao {
 
     @Query("DELETE FROM items WHERE id = :itemId")
     suspend fun deleteItem(itemId: String): Int
+
+    @Query("SELECT * FROM items")
+    suspend fun listAllItems(): List<ItemEntity>
+
+    @Query("SELECT * FROM items WHERE folderId = :folderId")
+    suspend fun getItemsInFolder(folderId: String): List<ItemEntity>
+
+    // ==================== 标签 (Tag) ====================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTag(tag: TagEntity): Long
@@ -91,27 +144,37 @@ interface AppDao {
     @Query("DELETE FROM tags WHERE id = :tagId")
     suspend fun deleteTag(tagId: String): Int
 
+    @Query("SELECT * FROM tags")
+    suspend fun listAllTags(): List<TagEntity>
+
+    // ==================== 物品-标签关联 ====================
+
     @Query("DELETE FROM item_tags WHERE itemId = :itemId")
     suspend fun clearTagsForItem(itemId: String): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addItemTags(refs: List<ItemTagCrossRef>): List<Long>
 
+    @Query("SELECT * FROM item_tags")
+    suspend fun listAllItemTags(): List<ItemTagCrossRef>
+
+    // ==================== 搜索 ====================
+
     @Query(
         """
         SELECT i.id AS itemId, i.name AS itemName, i.note AS note, i.imagePath AS imagePath,
-               sp.id AS spotId, sp.name AS spotName,
-               s.id AS spaceId, s.name AS spaceName
+               f.id AS folderId, f.name AS folderName,
+               l.id AS locationId, l.name AS locationName
         FROM items i
-        JOIN spots sp ON sp.id = i.spotId
-        JOIN spaces s ON s.id = sp.spaceId
+        JOIN folders f ON f.id = i.folderId
+        JOIN locations l ON l.id = f.locationId
         LEFT JOIN item_tags it ON it.itemId = i.id
         LEFT JOIN tags t ON t.id = it.tagId
         WHERE
             i.name LIKE '%' || :q || '%'
             OR COALESCE(i.note, '') LIKE '%' || :q || '%'
-            OR sp.name LIKE '%' || :q || '%'
-            OR s.name LIKE '%' || :q || '%'
+            OR f.name LIKE '%' || :q || '%'
+            OR l.name LIKE '%' || :q || '%'
             OR COALESCE(t.name, '') LIKE '%' || :q || '%'
         GROUP BY i.id
         ORDER BY i.updatedAt DESC
@@ -120,13 +183,15 @@ interface AppDao {
     )
     fun observeSearchResults(q: String): Flow<List<ItemSearchResultRow>>
 
+    // ==================== 过期物品 ====================
+
     @Query(
         """
         SELECT i.id AS itemId, i.name AS itemName, i.expiryDateEpochMs AS expiryDateEpochMs,
-               sp.name AS spotName, s.name AS spaceName
+               f.name AS folderName, l.name AS locationName
         FROM items i
-        JOIN spots sp ON sp.id = i.spotId
-        JOIN spaces s ON s.id = sp.spaceId
+        JOIN folders f ON f.id = i.folderId
+        JOIN locations l ON l.id = f.locationId
         WHERE i.expiryDateEpochMs IS NOT NULL AND i.expiryDateEpochMs <= :upperBoundEpochMs
         ORDER BY i.expiryDateEpochMs ASC
         """
@@ -135,6 +200,8 @@ interface AppDao {
 
     @Query("SELECT COUNT(*) FROM items WHERE expiryDateEpochMs IS NOT NULL AND expiryDateEpochMs <= :upperBoundEpochMs AND expiryDateEpochMs > :lowerBoundEpochMs")
     fun observeExpiringItemsCount(lowerBoundEpochMs: Long, upperBoundEpochMs: Long): Flow<Int>
+
+    // ==================== 补货候选 ====================
 
     @Query(
         """
@@ -145,6 +212,8 @@ interface AppDao {
         """
     )
     suspend fun listRestockCandidates(): List<ItemEntity>
+
+    // ==================== 清单 (List) ====================
 
     @Query("SELECT * FROM lists ORDER BY updatedAt DESC")
     fun observeLists(): Flow<List<PackingListEntity>>
@@ -173,6 +242,14 @@ interface AppDao {
     @Query("DELETE FROM lists WHERE id = :listId")
     suspend fun deleteList(listId: String): Int
 
+    @Query("SELECT * FROM lists")
+    suspend fun listAllLists(): List<PackingListEntity>
+
+    @Query("SELECT * FROM list_items")
+    suspend fun listAllListItems(): List<PackingListItemEntity>
+
+    // ==================== 清空数据 ====================
+
     @Query("DELETE FROM item_tags")
     suspend fun clearAllItemTags(): Int
 
@@ -182,45 +259,15 @@ interface AppDao {
     @Query("DELETE FROM items")
     suspend fun clearAllItems(): Int
 
-    @Query("DELETE FROM spots")
-    suspend fun clearAllSpots(): Int
+    @Query("DELETE FROM folders")
+    suspend fun clearAllFolders(): Int
 
-    @Query("DELETE FROM spaces")
-    suspend fun clearAllSpaces(): Int
+    @Query("DELETE FROM locations")
+    suspend fun clearAllLocations(): Int
 
     @Query("DELETE FROM list_items")
     suspend fun clearAllListItems(): Int
 
     @Query("DELETE FROM lists")
     suspend fun clearAllLists(): Int
-
-    @Query("SELECT * FROM spaces")
-    suspend fun listAllSpaces(): List<SpaceEntity>
-
-    @Query("SELECT * FROM spots")
-    suspend fun listAllSpots(): List<SpotEntity>
-
-    @Query("SELECT * FROM spots WHERE spaceId = :spaceId")
-    suspend fun listSpotsForSpace(spaceId: String): List<SpotEntity>
-
-    @Query("SELECT * FROM items")
-    suspend fun listAllItems(): List<ItemEntity>
-
-    @Query("SELECT i.* FROM items i JOIN spots s ON i.spotId = s.id WHERE s.spaceId = :spaceId")
-    suspend fun getItemsInSpace(spaceId: String): List<ItemEntity>
-
-    @Query("SELECT * FROM items WHERE spotId = :spotId")
-    suspend fun getItemsInSpot(spotId: String): List<ItemEntity>
-
-    @Query("SELECT * FROM tags")
-    suspend fun listAllTags(): List<TagEntity>
-
-    @Query("SELECT * FROM item_tags")
-    suspend fun listAllItemTags(): List<ItemTagCrossRef>
-
-    @Query("SELECT * FROM lists")
-    suspend fun listAllLists(): List<PackingListEntity>
-
-    @Query("SELECT * FROM list_items")
-    suspend fun listAllListItems(): List<PackingListItemEntity>
 }

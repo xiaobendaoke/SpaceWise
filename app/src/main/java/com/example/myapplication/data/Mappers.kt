@@ -10,17 +10,72 @@
 package com.example.myapplication.data
 
 import androidx.compose.ui.geometry.Offset
+import com.example.myapplication.BreadcrumbItem
+import com.example.myapplication.Folder
 import com.example.myapplication.Item
-import com.example.myapplication.Space
-import com.example.myapplication.Spot
+import com.example.myapplication.Location
 import com.example.myapplication.Tag
 
-fun SpaceSummaryRow.toDomain(): Space {
-    return Space(
+fun LocationSummaryRow.toDomain(): Location {
+    return Location(
         id = id,
         name = name,
+        icon = icon,
         coverImagePath = coverImagePath,
-        spots = emptyList()
+        folderCount = folderCount,
+        itemCount = itemCount,
+    )
+}
+
+fun LocationEntity.toDomain(): Location {
+    return Location(
+        id = id,
+        name = name,
+        icon = icon,
+        coverImagePath = coverImagePath,
+    )
+}
+
+fun FolderSummaryRow.toDomain(): Folder {
+    return Folder(
+        id = id,
+        locationId = locationId,
+        parentId = parentId,
+        name = name,
+        icon = icon,
+        coverImagePath = coverImagePath,
+        enableMapView = enableMapView,
+        mapPosition = if (mapX != null && mapY != null) Offset(mapX, mapY) else null,
+        subFolderCount = subFolderCount,
+        itemCount = itemCount,
+    )
+}
+
+fun FolderEntity.toDomain(): Folder {
+    return Folder(
+        id = id,
+        locationId = locationId,
+        parentId = parentId,
+        name = name,
+        icon = icon,
+        coverImagePath = coverImagePath,
+        enableMapView = enableMapView,
+        mapPosition = if (mapX != null && mapY != null) Offset(mapX, mapY) else null,
+    )
+}
+
+fun FolderWithItems.toDomain(): Folder {
+    return Folder(
+        id = folder.id,
+        locationId = folder.locationId,
+        parentId = folder.parentId,
+        name = folder.name,
+        icon = folder.icon,
+        coverImagePath = folder.coverImagePath,
+        enableMapView = folder.enableMapView,
+        mapPosition = if (folder.mapX != null && folder.mapY != null) Offset(folder.mapX, folder.mapY) else null,
+        itemCount = items.size,
+        items = items.map { it.toDomain() },
     )
 }
 
@@ -41,19 +96,10 @@ fun ItemWithTags.toDomain(): Item {
     )
 }
 
-fun SpaceWithSpots.toDomain(): Space {
-    return Space(
-        id = space.id,
-        name = space.name,
-        coverImagePath = space.coverImagePath,
-        spots = spots.map { spotWithItems ->
-            Spot(
-                id = spotWithItems.spot.id,
-                name = spotWithItems.spot.name,
-                position = Offset(spotWithItems.spot.x, spotWithItems.spot.y),
-                items = spotWithItems.items.map { it.toDomain() }
-            )
-        }
+fun BreadcrumbRow.toDomain(): BreadcrumbItem {
+    return BreadcrumbItem(
+        id = id,
+        name = name,
+        isLocation = isLocation,
     )
 }
-

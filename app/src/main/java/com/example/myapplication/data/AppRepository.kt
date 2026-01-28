@@ -29,9 +29,8 @@ class AppRepository(private val db: AppDatabase) {
             dao.clearAllItemTags()
             dao.clearAllTags()
             dao.clearAllItems()
-            dao.clearAllSpots()
-            dao.clearAllSpaces()
+            dao.clearAllFolders()
+            dao.clearAllLocations()
         }
     }
 }
-

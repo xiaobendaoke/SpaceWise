@@ -18,57 +18,71 @@ import androidx.room.Junction
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 
-@Entity(
-    tableName = "spaces",
-)
-data class SpaceEntity(
+/**
+ * 场所实体 - 最顶层容器（如：我的家、办公室、父母家）
+ */
+@Entity(tableName = "locations")
+data class LocationEntity(
     @PrimaryKey val id: String,
     val name: String,
+    val icon: String?,            // emoji 图标
     val coverImagePath: String?,
+    val sortOrder: Int,
     val createdAt: Long,
     val updatedAt: Long,
 )
 
+/**
+ * 文件夹实体 - 支持无限嵌套的容器（如：房间、家具、抽屉等）
+ */
 @Entity(
-    tableName = "spots",
+    tableName = "folders",
     foreignKeys = [
         ForeignKey(
-            entity = SpaceEntity::class,
+            entity = LocationEntity::class,
             parentColumns = ["id"],
-            childColumns = ["spaceId"],
+            childColumns = ["locationId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("spaceId")]
+    indices = [Index("locationId"), Index("parentId")]
 )
-data class SpotEntity(
+data class FolderEntity(
     @PrimaryKey val id: String,
-    val spaceId: String,
+    val locationId: String,       // 所属场所
+    val parentId: String?,        // 父文件夹ID，null=场所根目录
     val name: String,
-    val x: Float,
-    val y: Float,
+    val icon: String?,            // emoji 图标
+    val coverImagePath: String?,
+    val enableMapView: Boolean,   // 是否启用平面图模式
+    val mapX: Float?,             // 平面图坐标X（可选）
+    val mapY: Float?,             // 平面图坐标Y（可选）
+    val sortOrder: Int,
     val createdAt: Long,
     val updatedAt: Long,
 )
 
+/**
+ * 物品实体
+ */
 @Entity(
     tableName = "items",
     foreignKeys = [
         ForeignKey(
-            entity = SpotEntity::class,
+            entity = FolderEntity::class,
             parentColumns = ["id"],
-            childColumns = ["spotId"],
+            childColumns = ["folderId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [
-        Index("spotId"),
+        Index("folderId"),
         Index("expiryDateEpochMs"),
     ]
 )
 data class ItemEntity(
     @PrimaryKey val id: String,
-    val spotId: String,
+    val folderId: String,         // 所属文件夹
     val name: String,
     val note: String?,
     val imagePath: String?,
@@ -80,6 +94,9 @@ data class ItemEntity(
     val updatedAt: Long,
 )
 
+/**
+ * 标签实体
+ */
 @Entity(
     tableName = "tags",
     indices = [Index("parentId")]
@@ -91,6 +108,9 @@ data class TagEntity(
     val createdAt: Long,
 )
 
+/**
+ * 物品-标签关联表
+ */
 @Entity(
     tableName = "item_tags",
     primaryKeys = ["itemId", "tagId"],
@@ -118,6 +138,9 @@ data class ItemTagCrossRef(
     val tagId: String,
 )
 
+/**
+ * 清单实体
+ */
 @Entity(tableName = "lists")
 data class PackingListEntity(
     @PrimaryKey val id: String,
@@ -126,6 +149,9 @@ data class PackingListEntity(
     val updatedAt: Long,
 )
 
+/**
+ * 清单条目实体
+ */
 @Entity(
     tableName = "list_items",
     foreignKeys = [
@@ -149,13 +175,40 @@ data class PackingListItemEntity(
     val updatedAt: Long,
 )
 
-data class SpaceSummaryRow(
+// ==================== 查询结果模型 ====================
+
+/**
+ * 场所摘要行
+ */
+data class LocationSummaryRow(
     val id: String,
     val name: String,
+    val icon: String?,
     val coverImagePath: String?,
+    val folderCount: Int,
     val itemCount: Int,
 )
 
+/**
+ * 文件夹摘要行
+ */
+data class FolderSummaryRow(
+    val id: String,
+    val locationId: String,
+    val parentId: String?,
+    val name: String,
+    val icon: String?,
+    val coverImagePath: String?,
+    val enableMapView: Boolean,
+    val mapX: Float?,
+    val mapY: Float?,
+    val subFolderCount: Int,
+    val itemCount: Int,
+)
+
+/**
+ * 物品及其标签
+ */
 data class ItemWithTags(
     @Embedded val item: ItemEntity,
     @Relation(
@@ -170,48 +223,58 @@ data class ItemWithTags(
     val tags: List<TagEntity>,
 )
 
-data class SpotWithItems(
-    @Embedded val spot: SpotEntity,
+/**
+ * 文件夹及其物品
+ */
+data class FolderWithItems(
+    @Embedded val folder: FolderEntity,
     @Relation(
         entity = ItemEntity::class,
         parentColumn = "id",
-        entityColumn = "spotId"
+        entityColumn = "folderId"
     )
     val items: List<ItemWithTags>,
 )
 
-data class SpaceWithSpots(
-    @Embedded val space: SpaceEntity,
-    @Relation(
-        entity = SpotEntity::class,
-        parentColumn = "id",
-        entityColumn = "spaceId"
-    )
-    val spots: List<SpotWithItems>,
-)
-
+/**
+ * 物品搜索结果行
+ */
 data class ItemSearchResultRow(
     val itemId: String,
     val itemName: String,
     val note: String?,
     val imagePath: String?,
-    val spotId: String,
-    val spotName: String,
-    val spaceId: String,
-    val spaceName: String,
+    val folderId: String,
+    val folderName: String,
+    val locationId: String,
+    val locationName: String,
 )
 
+/**
+ * 即将过期物品行
+ */
 data class ExpiringItemRow(
     val itemId: String,
     val itemName: String,
     val expiryDateEpochMs: Long,
-    val spotName: String,
-    val spaceName: String,
+    val folderName: String,
+    val locationName: String,
 )
 
+/**
+ * 清单及其条目
+ */
 data class ListWithItems(
     @Embedded val list: PackingListEntity,
     @Relation(parentColumn = "id", entityColumn = "listId")
     val items: List<PackingListItemEntity>,
 )
 
+/**
+ * 面包屑导航项
+ */
+data class BreadcrumbRow(
+    val id: String,
+    val name: String,
+    val isLocation: Boolean,
+)

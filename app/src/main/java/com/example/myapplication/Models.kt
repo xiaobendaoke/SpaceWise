@@ -2,7 +2,7 @@
  * 领域模型定义。
  *
  * 职责：
- * - 定义应用核心概念：`Item`（物品）、`Spot`（点位）、`Tag`（标签）、`Space`（空间）。
+ * - 定义应用核心概念：`Location`（场所）、`Folder`（文件夹）、`Item`（物品）、`Tag`（标签）。
  * - 提供基础的数据封装。
  *
  * 上层用途：
@@ -12,6 +12,38 @@ package com.example.myapplication
 
 import androidx.compose.ui.geometry.Offset
 
+/**
+ * 场所 - 最顶层容器，如家、办公室等
+ */
+data class Location(
+    val id: String,
+    val name: String,
+    val icon: String? = null,
+    val coverImagePath: String? = null,
+    val folderCount: Int = 0,
+    val itemCount: Int = 0,
+)
+
+/**
+ * 文件夹 - 可无限嵌套的容器，如房间、家具、抽屉等
+ */
+data class Folder(
+    val id: String,
+    val locationId: String,
+    val parentId: String? = null,
+    val name: String,
+    val icon: String? = null,
+    val coverImagePath: String? = null,
+    val enableMapView: Boolean = false,
+    val mapPosition: Offset? = null,
+    val subFolderCount: Int = 0,
+    val itemCount: Int = 0,
+    val items: List<Item> = emptyList(),   // 用于详情页展示
+)
+
+/**
+ * 物品
+ */
 data class Item(
     val id: String,
     val name: String,
@@ -24,25 +56,20 @@ data class Item(
     val tags: List<Tag> = emptyList()
 )
 
-data class Spot(
-    val id: String,
-    val name: String,
-    var position: Offset,
-    val items: List<Item> = emptyList()
-)
-
+/**
+ * 标签
+ */
 data class Tag(
     val id: String,
     val name: String,
     val parentId: String? = null
 )
 
-data class Space(
+/**
+ * 面包屑导航项
+ */
+data class BreadcrumbItem(
     val id: String,
     val name: String,
-    val coverImagePath: String? = null,
-    val spots: List<Spot> = emptyList()
-) {
-    val itemCount: Int
-        get() = spots.sumOf { it.items.size }
-}
+    val isLocation: Boolean = false,
+)

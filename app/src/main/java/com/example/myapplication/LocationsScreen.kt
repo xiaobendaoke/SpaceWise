@@ -1,9 +1,9 @@
 /**
- * 空间列表页面。
+ * 场所列表页面（首页）。
  *
  * 职责：
- * - 展示所有已创建的空间卡片。
- * - 处理空间的创建和删除逻辑。
+ * - 展示所有已创建的场所卡片。
+ * - 处理场所的创建和删除逻辑。
  *
  * 上层用途：
  * - 应用启动后的默认展示页面（首页）。
@@ -57,7 +57,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,32 +68,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.FilterChip
-import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SpacesScreen(
+fun LocationsScreen(
     viewModel: SpaceViewModel,
-    onSpaceClick: (String) -> Unit
+    onLocationClick: (String) -> Unit
 ) {
-    val spaces by viewModel.spaces.collectAsState()
+    val locations by viewModel.locations.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSheet by remember { mutableStateOf(false) }
-    var pendingDeleteSpaceId by remember { mutableStateOf<String?>(null) }
-    var newSpaceName by remember { mutableStateOf("") }
-    var selectedTemplateId by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteLocationId by remember { mutableStateOf<String?>(null) }
+    var newLocationName by remember { mutableStateOf("") }
+    var newLocationIcon by remember { mutableStateOf("🏠") }
     var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -102,14 +94,15 @@ fun SpacesScreen(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { ok ->
-        val name = newSpaceName.trim()
+        val name = newLocationName.trim()
         val uri = pendingCameraUri
         if (ok && uri != null && name.isNotBlank()) {
             scope.launch(Dispatchers.IO) {
                 val coverPath = viewModel.persistCapturedPhoto(uri)
                 launch(Dispatchers.Main) {
-                    viewModel.addSpace(name, coverPath, selectedTemplateId)
-                    newSpaceName = ""
+                    viewModel.addLocation(name, newLocationIcon, coverPath)
+                    newLocationName = ""
+                    newLocationIcon = "🏠"
                     showSheet = false
                 }
             }
@@ -119,14 +112,15 @@ fun SpacesScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        val name = newSpaceName.trim()
+        val name = newLocationName.trim()
         if (uri != null && name.isNotBlank()) {
             scope.launch(Dispatchers.IO) {
                 val coverPath = viewModel.persistGalleryUri(uri)
                 launch(Dispatchers.Main) {
                     if (coverPath != null) {
-                        viewModel.addSpace(name, coverPath, selectedTemplateId)
-                        newSpaceName = ""
+                        viewModel.addLocation(name, newLocationIcon, coverPath)
+                        newLocationName = ""
+                        newLocationIcon = "🏠"
                         showSheet = false
                     } else {
                         Toast.makeText(context, "无法读取图片", Toast.LENGTH_SHORT).show()
@@ -145,13 +139,13 @@ fun SpacesScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 4.dp), // Adjusted padding
+                .padding(top = 10.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "我的空间",
+                    text = "我的场所",
                     style = MaterialTheme.typography.displayLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp
@@ -160,62 +154,63 @@ fun SpacesScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${spaces.size} 个空间",
+                    text = "${locations.size} 个场所",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             ActionButton(
                 icon = Icons.Filled.Add,
-                label = "添加空间",
+                label = "添加场所",
                 onClick = {
-                    selectedTemplateId = null
-                    newSpaceName = ""
+                    newLocationName = ""
+                    newLocationIcon = "🏠"
                     showSheet = true
                 }
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp)) // Increased spacer for airiness
+        Spacer(modifier = Modifier.height(24.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(20.dp), // Increased spacing
-            horizontalArrangement = Arrangement.spacedBy(20.dp), // Increased spacing
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(spaces, key = { it.id }) { space ->
-                ModernSpaceCard(
-                    space = space,
-                    onClick = { onSpaceClick(space.id) },
-                    onLongClick = { pendingDeleteSpaceId = space.id }
+            items(locations, key = { it.id }) { location ->
+                LocationCard(
+                    location = location,
+                    onClick = { onLocationClick(location.id) },
+                    onLongClick = { pendingDeleteLocationId = location.id }
                 )
             }
         }
     }
 
-    pendingDeleteSpaceId?.let { spaceId ->
-        val spaceName = spaces.firstOrNull { it.id == spaceId }?.name ?: "该空间"
+    // 删除确认对话框
+    pendingDeleteLocationId?.let { locationId ->
+        val locationName = locations.firstOrNull { it.id == locationId }?.name ?: "该场所"
         AlertDialog(
-            onDismissRequest = { pendingDeleteSpaceId = null },
-            title = { Text("删除空间") },
-            text = { Text("确定删除 \"$spaceName\" 吗？此操作无法撤销。") },
+            onDismissRequest = { pendingDeleteLocationId = null },
+            title = { Text("删除场所") },
+            text = { Text("确定删除 \"$locationName\" 吗？此操作无法撤销，场所内的所有文件夹和物品都将被删除。") },
             confirmButton = {
                 androidx.compose.material3.Button(
                     onClick = {
-                        viewModel.removeSpace(spaceId)
-                        pendingDeleteSpaceId = null
+                        viewModel.removeLocation(locationId)
+                        pendingDeleteLocationId = null
                     },
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     ),
-                    shape = RoundedCornerShape(100.dp) // Pill shape
+                    shape = RoundedCornerShape(100.dp)
                 ) { Text("删除") }
             },
             dismissButton = {
                 OutlinedButton(
-                    onClick = { pendingDeleteSpaceId = null },
-                    shape = RoundedCornerShape(100.dp) // Pill shape
+                    onClick = { pendingDeleteLocationId = null },
+                    shape = RoundedCornerShape(100.dp)
                 ) { Text("取消") }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -223,6 +218,7 @@ fun SpacesScreen(
         )
     }
 
+    // 新建场所底部弹窗
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
@@ -237,25 +233,52 @@ fun SpacesScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
-                    text = "新建空间",
+                    text = "新建场所",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                // 图标选择
+                Text(
+                    text = "选择图标",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val icons = listOf("🏠", "🏢", "🏪", "🏥", "🏫", "🏭", "🏡", "🏘️")
+                    icons.forEach { icon ->
+                        Surface(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable { newLocationIcon = icon },
+                            color = if (newLocationIcon == icon) 
+                                MaterialTheme.colorScheme.primaryContainer 
+                            else 
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            shape = CircleShape
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Text(text = icon, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                }
+                
                 OutlinedTextField(
-                    value = newSpaceName,
-                    onValueChange = { newSpaceName = it },
-                    label = { Text("空间名称") },
+                    value = newLocationName,
+                    onValueChange = { newLocationName = it },
+                    label = { Text("场所名称") },
+                    placeholder = { Text("例如：我的家、办公室") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 )
 
-                TemplatePicker(
-                    selectedTemplateId = selectedTemplateId,
-                    onSelect = { selectedTemplateId = it }
-                )
-
                 Text(
-                    text = "选择封面照片",
+                    text = "选择封面照片（可选）",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -265,9 +288,9 @@ fun SpacesScreen(
                 ) {
                     FilledTonalButton(
                         onClick = {
-                            val name = newSpaceName.trim()
+                            val name = newLocationName.trim()
                             if (name.isBlank()) {
-                                Toast.makeText(context, "请先输入空间名称", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "请先输入场所名称", Toast.LENGTH_SHORT).show()
                             } else {
                                 val uri = viewModel.createTempCameraUri()
                                 pendingCameraUri = uri
@@ -275,7 +298,7 @@ fun SpacesScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(100.dp) // Pill
+                        shape = RoundedCornerShape(100.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoCamera, contentDescription = null)
                         Spacer(modifier = Modifier.size(8.dp))
@@ -283,34 +306,35 @@ fun SpacesScreen(
                     }
                     FilledTonalButton(
                         onClick = {
-                            val name = newSpaceName.trim()
+                            val name = newLocationName.trim()
                             if (name.isBlank()) {
-                                Toast.makeText(context, "请先输入空间名称", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "请先输入场所名称", Toast.LENGTH_SHORT).show()
                             } else {
                                 galleryLauncher.launch("image/*")
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(100.dp) // Pill
+                        shape = RoundedCornerShape(100.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.PhotoLibrary, contentDescription = null)
                         Spacer(modifier = Modifier.size(8.dp))
                         Text("相册")
                     }
                 }
-                androidx.compose.material3.Button( // Use primary button for "create directly"
+                androidx.compose.material3.Button(
                     onClick = {
-                        val name = newSpaceName.trim()
+                        val name = newLocationName.trim()
                         if (name.isBlank()) {
-                            Toast.makeText(context, "请先输入空间名称", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "请先输入场所名称", Toast.LENGTH_SHORT).show()
                         } else {
-                            viewModel.addSpace(name, null, selectedTemplateId)
-                            newSpaceName = ""
+                            viewModel.addLocation(name, newLocationIcon, null)
+                            newLocationName = ""
+                            newLocationIcon = "🏠"
                             showSheet = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(100.dp) // Pill
+                    shape = RoundedCornerShape(100.dp)
                 ) {
                     Text("直接创建")
                 }
@@ -332,8 +356,8 @@ fun ActionButton(
     ) {
         Surface(
             modifier = Modifier
-                .size(56.dp) // Slightly smaller
-                .shadow(elevation = 8.dp, shape = CircleShape, clip = false) // Softer shadow
+                .size(56.dp)
+                .shadow(elevation = 8.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
                 .clickable(onClick = onClick),
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -357,29 +381,28 @@ fun ActionButton(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ModernSpaceCard(
-    space: SpaceCard,
+fun LocationCard(
+    location: Location,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
     val context = LocalContext.current
     val coverMaxPx = with(LocalDensity.current) { 900.dp.roundToPx() }
-    // 异步加载图片，避免主线程阻塞
     var coverBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    LaunchedEffect(space.coverImagePath) {
+    LaunchedEffect(location.coverImagePath) {
         coverBitmap = kotlinx.coroutines.withContext(Dispatchers.IO) {
-            space.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
+            location.coverImagePath?.let { loadBitmapFromInternalPath(context, it, coverMaxPx) }
         }
     }
+    
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            // Hygge: Increased corner radius (24.dp) and softer shadow (tonal + less elevation)
             .shadow(
                 elevation = 6.dp,
                 shape = RoundedCornerShape(24.dp),
                 clip = false,
-                ambientColor = Color(0x408D7B68), // Warm shadow hint
+                ambientColor = Color(0x408D7B68),
                 spotColor = Color(0x408D7B68)
             )
             .clip(RoundedCornerShape(24.dp))
@@ -388,7 +411,7 @@ fun ModernSpaceCard(
                 onLongClick = onLongClick
             ),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp // Slight tonal elevation for separation
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -398,7 +421,7 @@ fun ModernSpaceCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.1f)
-                    .clip(RoundedCornerShape(20.dp)) // Nested soft corner
+                    .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -411,23 +434,31 @@ fun ModernSpaceCard(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(32.dp)
+                    // 显示图标
+                    Text(
+                        text = location.icon ?: "🏠",
+                        fontSize = 48.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (location.icon != null) {
+                        Text(text = location.icon, fontSize = 18.sp)
+                    }
+                    Text(
+                        text = location.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                }
                 Text(
-                    text = space.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = "${space.itemCount} 个物品",
+                    text = "${location.folderCount} 个文件夹 · ${location.itemCount} 个物品",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

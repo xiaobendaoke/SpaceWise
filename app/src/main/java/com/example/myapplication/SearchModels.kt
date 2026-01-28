@@ -14,12 +14,11 @@ data class ItemSearchResult(
     val itemName: String,
     val note: String?,
     val imagePath: String?,
-    val spaceId: String,
-    val spaceName: String,
-    val spotId: String,
-    val spotName: String,
+    val locationId: String,
+    val locationName: String,
+    val folderId: String,
+    val folderName: String,
 ) {
     val path: String
-        get() = "$spaceName > $spotName"
+        get() = "$locationName > $folderName"
 }
-

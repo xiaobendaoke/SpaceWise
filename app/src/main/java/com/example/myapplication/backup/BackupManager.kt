@@ -14,12 +14,12 @@ import android.content.Context
 import android.net.Uri
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.AppRepository
+import com.example.myapplication.data.FolderEntity
 import com.example.myapplication.data.ItemEntity
 import com.example.myapplication.data.ItemTagCrossRef
+import com.example.myapplication.data.LocationEntity
 import com.example.myapplication.data.PackingListEntity
 import com.example.myapplication.data.PackingListItemEntity
-import com.example.myapplication.data.SpaceEntity
-import com.example.myapplication.data.SpotEntity
 import com.example.myapplication.data.TagEntity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,8 +35,8 @@ object BackupManager {
 
     suspend fun exportToZip(context: Context, destination: Uri) {
         val dao = AppDatabase.get(context).dao()
-        val spaces = dao.listAllSpaces()
-        val spots = dao.listAllSpots()
+        val locations = dao.listAllLocations()
+        val folders = dao.listAllFolders()
         val items = dao.listAllItems()
         val tags = dao.listAllTags()
         val itemTags = dao.listAllItemTags()
@@ -44,9 +44,9 @@ object BackupManager {
         val listItems = dao.listAllListItems()
 
         val json = JSONObject().apply {
-            put("version", 1)
-            put("spaces", spaces.toJsonArray { it.toJson() })
-            put("spots", spots.toJsonArray { it.toJson() })
+            put("version", 2)  // 新版本
+            put("locations", locations.toJsonArray { it.toJson() })
+            put("folders", folders.toJsonArray { it.toJson() })
             put("items", items.toJsonArray { it.toJson() })
             put("tags", tags.toJsonArray { it.toJson() })
             put("itemTags", itemTags.toJsonArray { it.toJson() })
@@ -54,12 +54,14 @@ object BackupManager {
             put("listItems", listItems.toJsonArray { it.toJson() })
         }
 
-        val imagesToInclude = (spaces.mapNotNull { it.coverImagePath } + items.mapNotNull { it.imagePath })
-            .distinct()
-            .mapNotNull { path ->
-                val file = File(context.filesDir, path)
-                if (file.exists() && file.isFile) path else null
-            }
+        val imagesToInclude = (
+            locations.mapNotNull { it.coverImagePath } + 
+            folders.mapNotNull { it.coverImagePath } + 
+            items.mapNotNull { it.imagePath }
+        ).distinct().mapNotNull { path ->
+            val file = File(context.filesDir, path)
+            if (file.exists() && file.isFile) path else null
+        }
 
         context.contentResolver.openOutputStream(destination)?.use { outputStream ->
             ZipOutputStream(BufferedOutputStream(outputStream)).use { zip ->
@@ -101,7 +103,7 @@ object BackupManager {
 
         val root = JSONObject(extractedJson.toString())
         val version = root.optInt("version", 1)
-        require(version == 1) { "不支持的备份版本: $version" }
+        require(version >= 1) { "不支持的备份版本: $version" }
 
         clearInternalImages(context)
         for ((path, bytes) in images) {
@@ -114,21 +116,27 @@ object BackupManager {
         val dao = db.dao()
         AppRepository(db).wipeAllData()
 
-        val spaces = root.getJSONArray("spaces").toSpaces()
-        val spots = root.getJSONArray("spots").toSpots()
-        val items = root.getJSONArray("items").toItems()
-        val tags = root.getJSONArray("tags").toTags()
-        val itemTags = root.getJSONArray("itemTags").toItemTags()
-        val lists = root.getJSONArray("lists").toLists()
-        val listItems = root.getJSONArray("listItems").toListItems()
+        if (version >= 2) {
+            // 新版本格式
+            val locations = root.getJSONArray("locations").toLocations()
+            val folders = root.getJSONArray("folders").toFolders()
+            val items = root.getJSONArray("items").toItems()
+            val tags = root.getJSONArray("tags").toTags()
+            val itemTags = root.getJSONArray("itemTags").toItemTags()
+            val lists = root.getJSONArray("lists").toLists()
+            val listItems = root.getJSONArray("listItems").toListItems()
 
-        for (space in spaces) dao.upsertSpace(space)
-        dao.upsertSpots(spots)
-        for (item in items) dao.upsertItem(item)
-        for (tag in tags) dao.upsertTag(tag)
-        dao.addItemTags(itemTags)
-        for (list in lists) dao.upsertList(list)
-        dao.upsertListItems(listItems)
+            for (location in locations) dao.upsertLocation(location)
+            for (folder in folders) dao.upsertFolder(folder)
+            for (item in items) dao.upsertItem(item)
+            for (tag in tags) dao.upsertTag(tag)
+            dao.addItemTags(itemTags)
+            for (list in lists) dao.upsertList(list)
+            dao.upsertListItems(listItems)
+        } else {
+            // 旧版本格式 - 忽略数据（已使用销毁性迁移，无法恢复旧格式）
+            // 用户需要重新开始
+        }
     }
 
     private fun clearInternalImages(context: Context) {
@@ -143,27 +151,34 @@ object BackupManager {
         return array
     }
 
-    private fun SpaceEntity.toJson(): JSONObject = JSONObject().apply {
+    private fun LocationEntity.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
+        put("icon", icon)
         put("coverImagePath", coverImagePath)
+        put("sortOrder", sortOrder)
         put("createdAt", createdAt)
         put("updatedAt", updatedAt)
     }
 
-    private fun SpotEntity.toJson(): JSONObject = JSONObject().apply {
+    private fun FolderEntity.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
-        put("spaceId", spaceId)
+        put("locationId", locationId)
+        put("parentId", parentId)
         put("name", name)
-        put("x", x.toDouble())
-        put("y", y.toDouble())
+        put("icon", icon)
+        put("coverImagePath", coverImagePath)
+        put("enableMapView", enableMapView)
+        put("mapX", mapX?.toDouble())
+        put("mapY", mapY?.toDouble())
+        put("sortOrder", sortOrder)
         put("createdAt", createdAt)
         put("updatedAt", updatedAt)
     }
 
     private fun ItemEntity.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
-        put("spotId", spotId)
+        put("folderId", folderId)
         put("name", name)
         put("note", note)
         put("imagePath", imagePath)
@@ -205,25 +220,32 @@ object BackupManager {
         put("updatedAt", updatedAt)
     }
 
-    private fun JSONArray.toSpaces(): List<SpaceEntity> = (0 until length()).map { idx ->
+    private fun JSONArray.toLocations(): List<LocationEntity> = (0 until length()).map { idx ->
         val o = getJSONObject(idx)
-        SpaceEntity(
+        LocationEntity(
             id = o.getString("id"),
             name = o.getString("name"),
+            icon = o.optString("icon").takeIf { it.isNotBlank() },
             coverImagePath = o.optString("coverImagePath").takeIf { it.isNotBlank() },
+            sortOrder = o.optInt("sortOrder", 0),
             createdAt = o.getLong("createdAt"),
             updatedAt = o.getLong("updatedAt"),
         )
     }
 
-    private fun JSONArray.toSpots(): List<SpotEntity> = (0 until length()).map { idx ->
+    private fun JSONArray.toFolders(): List<FolderEntity> = (0 until length()).map { idx ->
         val o = getJSONObject(idx)
-        SpotEntity(
+        FolderEntity(
             id = o.getString("id"),
-            spaceId = o.getString("spaceId"),
+            locationId = o.getString("locationId"),
+            parentId = o.optString("parentId").takeIf { it.isNotBlank() },
             name = o.getString("name"),
-            x = o.getDouble("x").toFloat(),
-            y = o.getDouble("y").toFloat(),
+            icon = o.optString("icon").takeIf { it.isNotBlank() },
+            coverImagePath = o.optString("coverImagePath").takeIf { it.isNotBlank() },
+            enableMapView = o.optBoolean("enableMapView", false),
+            mapX = if (o.isNull("mapX")) null else o.getDouble("mapX").toFloat(),
+            mapY = if (o.isNull("mapY")) null else o.getDouble("mapY").toFloat(),
+            sortOrder = o.optInt("sortOrder", 0),
             createdAt = o.getLong("createdAt"),
             updatedAt = o.getLong("updatedAt"),
         )
@@ -233,7 +255,7 @@ object BackupManager {
         val o = getJSONObject(idx)
         ItemEntity(
             id = o.getString("id"),
-            spotId = o.getString("spotId"),
+            folderId = o.getString("folderId"),
             name = o.getString("name"),
             note = o.optString("note").takeIf { it.isNotBlank() },
             imagePath = o.optString("imagePath").takeIf { it.isNotBlank() },
