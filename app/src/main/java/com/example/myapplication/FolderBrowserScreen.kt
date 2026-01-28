@@ -24,8 +24,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +47,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -103,7 +104,7 @@ object FolderIcons {
     val all = livingRoom + bedroom + kitchen + bathroom + study + storage + kids + misc
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FolderBrowserScreen(
     viewModel: SpaceViewModel,
@@ -130,10 +131,12 @@ fun FolderBrowserScreen(
     var newFolderCoverPath by remember { mutableStateOf<String?>(null) }
     var pendingDeleteFolderId by remember { mutableStateOf<String?>(null) }
     var pendingDeleteItemId by remember { mutableStateOf<String?>(null) }
+    var pendingLongPressFolderId by remember { mutableStateOf<String?>(null) }  // 区域长按菜单
+    var pendingLongPressItemId by remember { mutableStateOf<String?>(null) }  // 物品长按菜单
+    var editingFolder by remember { mutableStateOf<Folder?>(null) }  // 编辑中的区域
     var selectedItem by remember { mutableStateOf<Item?>(null) }
-    var showIconPicker by remember { mutableStateOf(false) }
     
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState()
     
     // 拍照和相册选择器
     var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -223,8 +226,19 @@ fun FolderBrowserScreen(
                         } else {
                             MaterialTheme.colorScheme.primary
                         },
+                        textDecoration = if (index != breadcrumbs.lastIndex) {
+                            androidx.compose.ui.text.style.TextDecoration.Underline
+                        } else null,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable(
+                            enabled = index != breadcrumbs.lastIndex
+                        ) {
+                            when {
+                                crumb.isLocation -> onBack()
+                                else -> onNavigateToFolder(crumb.id)
+                            }
+                        }
                     )
                 }
             }
@@ -266,7 +280,7 @@ fun FolderBrowserScreen(
                 FolderCard(
                     folder = folder,
                     onClick = { onNavigateToFolder(folder.id) },
-                    onLongClick = { pendingDeleteFolderId = folder.id }
+                    onLongClick = { pendingLongPressFolderId = folder.id }
                 )
             }
             
@@ -308,7 +322,7 @@ fun FolderBrowserScreen(
                         ItemCard(
                             item = item,
                             onClick = { selectedItem = item },
-                            onLongClick = { pendingDeleteItemId = item.id }
+                            onLongClick = { pendingLongPressItemId = item.id }
                         )
                     }
                 }
@@ -369,10 +383,10 @@ fun FolderBrowserScreen(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
-                Icon(Icons.Filled.CreateNewFolder, contentDescription = "新建文件夹")
+                Icon(Icons.Filled.CreateNewFolder, contentDescription = "新建区域")
             }
             
-            // 新建物品（仅在文件夹内显示）
+            // 新建物品（仅在区域内显示）
             if (folderId != null) {
                 FloatingActionButton(
                     onClick = { showAddItemDialog = true },
@@ -385,7 +399,7 @@ fun FolderBrowserScreen(
         }
     }
 
-    // 新建文件夹底部弹窗
+    // 新建区域底部弹窗
     if (showNewFolderSheet) {
         ModalBottomSheet(
             onDismissRequest = { showNewFolderSheet = false },
@@ -401,16 +415,16 @@ fun FolderBrowserScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "新建文件夹",
+                    text = "新建区域",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                // 文件夹名称输入框（移到顶部）
+                // 区域名称输入框（移到顶部）
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("文件夹名称") },
+                    label = { Text("区域名称") },
                     placeholder = { Text("例如：客厅、书架、抽屉") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
@@ -428,29 +442,6 @@ fun FolderBrowserScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // 当前选中的图片预览
-                    val thumbSizePx = with(LocalDensity.current) { 56.dp.roundToPx() }
-                    val coverBitmap = remember(newFolderCoverPath) {
-                        newFolderCoverPath?.let { loadBitmapFromInternalPath(context, it, thumbSizePx) }
-                    }
-                    if (coverBitmap != null) {
-                        Surface(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { newFolderCoverPath = null },
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                        ) {
-                            Image(
-                                bitmap = coverBitmap.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    }
-                    
                     FilledTonalButton(
                         onClick = {
                             val uri = viewModel.createTempCameraUri()
@@ -472,6 +463,17 @@ fun FolderBrowserScreen(
                         Text("相册")
                     }
                 }
+                
+                // 已选择自定义图片提示
+                if (newFolderCoverPath != null) {
+                    Text(
+                        text = "✓ 已选择自定义图片",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 
                 // 分类图标选择
                 IconCategoryInline("常用", listOf("📁", "🛋️", "🛏️", "🍳", "🚿", "📚", "📦", "🧰"), newFolderIcon, newFolderCoverPath) { 
@@ -517,7 +519,7 @@ fun FolderBrowserScreen(
                     onClick = {
                         val name = newFolderName.trim()
                         if (name.isBlank()) {
-                            Toast.makeText(context, "请输入文件夹名称", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "请输入区域名称", Toast.LENGTH_SHORT).show()
                         } else {
                             viewModel.addFolder(
                                 locationId = locationId, 
@@ -551,13 +553,112 @@ fun FolderBrowserScreen(
         )
     }
 
-    // 删除文件夹确认对话框
+    // 区域长按菜单
+    pendingLongPressFolderId?.let { folderId ->
+        val folder = folders.firstOrNull { it.id == folderId }
+        AlertDialog(
+            onDismissRequest = { pendingLongPressFolderId = null },
+            title = { Text(folder?.name ?: "操作") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            editingFolder = folder
+                            pendingLongPressFolderId = null
+                            showNewFolderSheet = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("编辑区域")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            pendingDeleteFolderId = folderId
+                            pendingLongPressFolderId = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("删除区域")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { pendingLongPressFolderId = null },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // 物品长按菜单
+    pendingLongPressItemId?.let { itemId ->
+        val item = items.firstOrNull { it.id == itemId }
+        AlertDialog(
+            onDismissRequest = { pendingLongPressItemId = null },
+            title = { Text(item?.name ?: "操作") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                           selectedItem = item
+                            pendingLongPressItemId = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("编辑物品")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            pendingDeleteItemId = itemId
+                            pendingLongPressItemId = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("删除物品")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { pendingLongPressItemId = null },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // 删除区域确认对话框
     pendingDeleteFolderId?.let { deleteFolderId ->
-        val folderName = folders.firstOrNull { it.id == deleteFolderId }?.name ?: "该文件夹"
+        val folderName = folders.firstOrNull { it.id == deleteFolderId }?.name ?: "该区域"
         AlertDialog(
             onDismissRequest = { pendingDeleteFolderId = null },
-            title = { Text("删除文件夹") },
-            text = { Text("确定删除 \"$folderName\" 吗？文件夹内的所有子文件夹和物品都将被删除。") },
+            title = { Text("删除区域") },
+            text = { Text("确定删除 \"$folderName\" 吗？区域内的所有子区域和物品都将被删除。") },
             confirmButton = {
                 androidx.compose.material3.Button(
                     onClick = {
@@ -624,7 +725,6 @@ fun FolderBrowserScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IconCategoryInline(
     title: String,
@@ -639,9 +739,11 @@ fun IconCategoryInline(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             icons.forEach { icon ->
                 Surface(
@@ -733,7 +835,7 @@ fun FolderCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${folder.subFolderCount} 个文件夹 · ${folder.itemCount} 个物品",
+                    text = "${folder.subFolderCount} 个区域 · ${folder.itemCount} 个物品",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

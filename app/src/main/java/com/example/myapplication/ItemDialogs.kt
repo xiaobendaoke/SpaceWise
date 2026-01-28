@@ -40,10 +40,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
@@ -53,6 +56,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -97,6 +101,7 @@ fun ItemUpsertDialog(
     var currentQty by remember { mutableStateOf((initialItem?.currentQuantity ?: 1).toString()) }
     var minQty by remember { mutableStateOf((initialItem?.minQuantity ?: 0).toString()) }
     var imagePath by remember { mutableStateOf(initialItem?.imagePath) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var ocrBusy by remember { mutableStateOf(false) }
@@ -158,9 +163,17 @@ fun ItemUpsertDialog(
                 )
                 OutlinedTextField(
                     value = expiry,
-                    onValueChange = { expiry = it },
-                    label = { Text("过期日期（YYYY-MM-DD）") },
-                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = {},  // 禁止手动输入
+                    readOnly = true,
+                    label = { Text("过期日期") },
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Filled.CalendarToday, contentDescription = "选择日期")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
                     shape = RoundedCornerShape(16.dp)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -316,6 +329,36 @@ fun ItemUpsertDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(24.dp)
     )
+
+    // 日历选择器对话框
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = SpaceViewModel.parseDateToEpochMs(expiry) ?: System.currentTimeMillis()
+        )
+        
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            expiry = SpaceViewModel.formatEpochMsToDate(millis) ?: ""
+                        }
+                        showDatePicker = false
+                    },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("确定") }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDatePicker = false },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     fullscreenImagePath?.let { path ->
         FullScreenImageDialog(imagePath = path, onDismiss = { fullscreenImagePath = null })

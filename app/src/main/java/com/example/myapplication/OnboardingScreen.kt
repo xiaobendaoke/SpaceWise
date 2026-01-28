@@ -72,23 +72,23 @@ fun OnboardingScreen(
     val steps = remember {
         listOf(
             OnboardingStep(
-                title = "欢迎使用收纳助手",
-                body = "用「空间」组织你的房间/柜子，用「地点(Spot)」标记具体位置，再把物品放进去。",
+                title = "欢迎使用井井",
+                body = "用「场所」组织你的家/办公室，用「区域」层层嵌套管理柜子、抽屉，轻松找到每一件物品。",
                 illustration = OnboardingIllustration.Overview
             ),
             OnboardingStep(
                 title = "从模板快速开始",
-                body = "在「空间」页点「添加空间」，可选择衣柜/药箱/工具箱等模板，自动生成常用地点和标签。",
+                body = "在首页点「新建场所」，可选择模板（如我的家、办公室），自动创建常用区域结构。",
                 illustration = OnboardingIllustration.Template
             ),
             OnboardingStep(
-                title = "标记地点并添加物品",
-                body = "进入空间后：长按地点圆点可拖动位置；点地点可进入物品列表，支持单个添加/批量添加。",
+                title = "创建区域并添加物品",
+                body = "进入场所后：点击「新建区域」创建柜子、抽屉等；区域可嵌套多层；点击区域进入，长按物品可编辑或删除。",
                 illustration = OnboardingIllustration.DragSpot
             ),
             OnboardingStep(
                 title = "更容易找到",
-                body = "物品可设置：标签、备注、过期日期、库存。使用「搜索」可按关键字/标签/位置快速定位。",
+                body = "物品支持拍照、OCR 识别、设置过期日期、库存等。使用「搜索」可按关键字/标签/路径快速定位。",
                 illustration = OnboardingIllustration.Search
             ),
             OnboardingStep(
@@ -137,7 +137,7 @@ fun OnboardingScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("要不要先加一些演示例子？", fontWeight = FontWeight.Bold, color = TextPrimary)
                         Text(
-                            "会创建几个「演示-」开头的空间和一份清单，不会删除你已有的数据。",
+                            "会创建几个「演示-」开头的场所和清单，不会删除你已有的数据。",
                             color = TextSecondary,
                             fontSize = 13.sp
                         )

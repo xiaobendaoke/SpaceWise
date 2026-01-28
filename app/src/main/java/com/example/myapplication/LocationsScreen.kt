@@ -18,6 +18,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
@@ -85,6 +88,8 @@ fun LocationsScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSheet by remember { mutableStateOf(false) }
     var pendingDeleteLocationId by remember { mutableStateOf<String?>(null) }
+    var pendingLongPressLocationId by remember { mutableStateOf<String?>(null) }  // 长按菜单
+    var editingLocation by remember { mutableStateOf<Location?>(null) }  // 编辑中的场所
     var newLocationName by remember { mutableStateOf("") }
     var newLocationIcon by remember { mutableStateOf("🏠") }
     var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -136,56 +141,110 @@ fun LocationsScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "我的场所",
-                    style = MaterialTheme.typography.displayLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${locations.size} 个场所",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            ActionButton(
-                icon = Icons.Filled.Add,
-                label = "添加场所",
-                onClick = {
-                    newLocationName = ""
-                    newLocationIcon = "🏠"
-                    showSheet = true
-                }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "我的场所",
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${locations.size} 个场所",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(locations, key = { it.id }) { location ->
-                LocationCard(
-                    location = location,
-                    onClick = { onLocationClick(location.id) },
-                    onLongClick = { pendingDeleteLocationId = location.id }
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(locations, key = { it.id }) { location ->
+                    LocationCard(
+                        location = location,
+                        onClick = { onLocationClick(location.id) },
+                        onLongClick = { pendingLongPressLocationId = location.id }
+                    )
+                }
+            }
+            
+            // 右下角新建场所按钮
+            androidx.compose.material3.FloatingActionButton(
+                onClick = {
+                    editingLocation = null // Clear editing state
+                    newLocationName = ""
+                    newLocationIcon = "🏠"
+                    showSheet = true
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "添加场所")
             }
         }
+    }
+
+    // 长按操作菜单
+    pendingLongPressLocationId?.let { locationId ->
+        val location = locations.firstOrNull { it.id == locationId }
+        AlertDialog(
+            onDismissRequest = { pendingLongPressLocationId = null },
+            title = { Text(location?.name ?: "操作") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            editingLocation = location
+                            pendingLongPressLocationId = null
+                            showSheet = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("编辑场所")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            pendingDeleteLocationId = locationId
+                            pendingLongPressLocationId = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("删除场所")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { pendingLongPressLocationId = null },
+                    shape = RoundedCornerShape(100.dp)
+                ) { Text("取消") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 
     // 删除确认对话框
@@ -194,7 +253,7 @@ fun LocationsScreen(
         AlertDialog(
             onDismissRequest = { pendingDeleteLocationId = null },
             title = { Text("删除场所") },
-            text = { Text("确定删除 \"$locationName\" 吗？此操作无法撤销，场所内的所有文件夹和物品都将被删除。") },
+            text = { Text("确定删除 \"$locationName\" 吗？此操作无法撤销，场所内的所有区域和物品都将被删除。") },
             confirmButton = {
                 androidx.compose.material3.Button(
                     onClick = {
@@ -218,8 +277,17 @@ fun LocationsScreen(
         )
     }
 
-    // 新建场所底部弹窗
+    // 新建/编辑场所底部弹窗
     if (showSheet) {
+        // 初始化编辑状态
+        LaunchedEffect(editingLocation) {
+            val location = editingLocation
+            if (location != null) {
+                newLocationName = location.name
+                newLocationIcon = location.icon ?: "🏠"
+            }
+        }
+        
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
@@ -233,7 +301,7 @@ fun LocationsScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
-                    text = "新建场所",
+                    text = if (editingLocation != null) "编辑场所" else "新建场所",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -327,9 +395,21 @@ fun LocationsScreen(
                         if (name.isBlank()) {
                             Toast.makeText(context, "请先输入场所名称", Toast.LENGTH_SHORT).show()
                         } else {
-                            viewModel.addLocation(name, newLocationIcon, null)
+                            val location = editingLocation
+                            if (location != null) {
+                                // 编辑模式
+                                viewModel.updateLocation(
+                                    locationId = location.id,
+                                    name = name,
+                                    icon = newLocationIcon
+                                )
+                            } else {
+                                // 新建模式
+                                viewModel.addLocation(name, newLocationIcon, null)
+                            }
                             newLocationName = ""
                             newLocationIcon = "🏠"
+                            editingLocation = null
                             showSheet = false
                         }
                     },
@@ -458,7 +538,7 @@ fun LocationCard(
                     )
                 }
                 Text(
-                    text = "${location.folderCount} 个文件夹 · ${location.itemCount} 个物品",
+                    text = "${location.folderCount} 个区域 · ${location.itemCount} 个物品",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

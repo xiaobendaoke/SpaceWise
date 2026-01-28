@@ -69,6 +69,7 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun addLocation(name: String, icon: String?, coverImagePath: String?) {
+        require(name.trim().isNotBlank()) { "Location name cannot be blank" }
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val maxOrder = dao.listAllLocations().maxOfOrNull { it.sortOrder } ?: 0
@@ -81,6 +82,21 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
                     sortOrder = maxOrder + 1,
                     createdAt = now,
                     updatedAt = now
+                )
+            )
+        }
+    }
+
+    fun updateLocation(locationId: String, name: String? = null, icon: String? = null, coverImagePath: String? = null) {
+        require(name == null || name.trim().isNotBlank()) { "Location name cannot be blank" }
+        viewModelScope.launch {
+            val location = dao.getLocation(locationId) ?: return@launch
+            dao.upsertLocation(
+                location.copy(
+                    name = name?.trim() ?: location.name,
+                    icon = icon ?: location.icon,
+                    coverImagePath = coverImagePath ?: location.coverImagePath,
+                    updatedAt = System.currentTimeMillis()
                 )
             )
         }
@@ -132,6 +148,7 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
         coverImagePath: String? = null,
         enableMapView: Boolean = false
     ) {
+        require(name.trim().isNotBlank()) { "Folder name cannot be blank" }
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val siblings = dao.listFoldersByParent(locationId, parentId)
@@ -194,18 +211,34 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
 
     fun removeFolder(folderId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 清理图片
-            val folder = dao.getFolder(folderId)
-            folder?.coverImagePath?.let { InternalImageStore.delete(getApplication(), it) }
+            // 递归清理所有子区域的图片
+            cleanupFolderResources(folderId)
             
-            // 清理物品图片
-            val items = dao.getItemsInFolder(folderId)
-            items.forEach { item ->
-                item.imagePath?.let { InternalImageStore.delete(getApplication(), it) }
-            }
-            
-            // 递归删除子文件夹（由于外键级联删除，会自动处理）
+            // 删除文件夹（外键级联会自动删除所有子区域和物品）
             dao.deleteFolder(folderId)
+        }
+    }
+    
+    /**
+     * 递归清理区域及其所有子区域的图片资源
+     */
+    private suspend fun cleanupFolderResources(folderId: String) {
+        // 获取当前区域
+        val folder = dao.getFolder(folderId) ?: return
+        
+        // 清理当前区域的封面图
+        folder.coverImagePath?.let { InternalImageStore.delete(getApplication(), it) }
+        
+        // 清理当前区域内的物品图片
+        val items = dao.getItemsInFolder(folderId)
+        items.forEach { item ->
+            item.imagePath?.let { InternalImageStore.delete(getApplication(), it) }
+        }
+        
+        // 递归清理所有子区域
+        val subFolders = dao.listFoldersByParent(folder.locationId, folderId)
+        subFolders.forEach { subFolder ->
+            cleanupFolderResources(subFolder.id)
         }
     }
 
@@ -221,11 +254,22 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
                 breadcrumbs.add(BreadcrumbItem(location.id, location.name, isLocation = true))
             }
             
-            // 添加文件夹路径
+            // 添加文件夹路径（带循环检测和深度限制）
             if (folderId != null) {
                 val path = mutableListOf<BreadcrumbItem>()
+                val visited = mutableSetOf<String>()
                 var currentId: String? = folderId
-                while (currentId != null) {
+                var depth = 0
+                val maxDepth = 100  // 防御性限制，正常情况下不会超过 10 层
+                
+                while (currentId != null && depth < maxDepth) {
+                    // 检测循环引用
+                    if (currentId in visited) {
+                        // 循环检测到，停止遍历
+                        break
+                    }
+                    visited.add(currentId)
+                    
                     val folder = dao.getFolder(currentId)
                     if (folder != null) {
                         path.add(0, BreadcrumbItem(folder.id, folder.name, isLocation = false))
@@ -233,6 +277,8 @@ class SpaceViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         break
                     }
+                    
+                    depth++
                 }
                 breadcrumbs.addAll(path)
             }
