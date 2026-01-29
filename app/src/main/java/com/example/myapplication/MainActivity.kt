@@ -46,6 +46,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.work.WorkScheduler
+import com.example.myapplication.vault.VaultScreen
+import com.example.myapplication.vault.VaultViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,7 +143,19 @@ fun MainApp() {
                     viewModel = viewModel,
                     onLocationClick = { locationId -> 
                         navController.navigate("folder_browser/$locationId") 
+                    },
+                    onVaultClick = {
+                        navController.navigate("vault")
                     }
+                )
+            }
+            
+            // 保险箱页面
+            composable("vault") {
+                val vaultViewModel: VaultViewModel = viewModel()
+                VaultScreen(
+                    viewModel = vaultViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
             

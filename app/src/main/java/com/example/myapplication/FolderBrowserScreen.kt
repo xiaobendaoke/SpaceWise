@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -135,6 +137,7 @@ fun FolderBrowserScreen(
     var pendingLongPressItemId by remember { mutableStateOf<String?>(null) }  // 物品长按菜单
     var editingFolder by remember { mutableStateOf<Folder?>(null) }  // 编辑中的区域
     var selectedItem by remember { mutableStateOf<Item?>(null) }
+    var pendingMoveItem by remember { mutableStateOf<Item?>(null) }  // 待移动的物品
     
     val sheetState = rememberModalBottomSheetState()
     
@@ -625,6 +628,18 @@ fun FolderBrowserScreen(
                     }
                     OutlinedButton(
                         onClick = {
+                            pendingMoveItem = item
+                            pendingLongPressItemId = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Filled.DriveFileMove, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("移动物品")
+                    }
+                    OutlinedButton(
+                        onClick = {
                             pendingDeleteItemId = itemId
                             pendingLongPressItemId = null
                         },
@@ -720,6 +735,19 @@ fun FolderBrowserScreen(
                 folderId = folderId,
                 initialItem = item,
                 onDismiss = { selectedItem = null }
+            )
+        }
+    }
+
+    // 移动物品对话框
+    pendingMoveItem?.let { item ->
+        if (folderId != null) {
+            ItemMoveDialog(
+                viewModel = viewModel,
+                currentLocationId = locationId,
+                currentFolderId = folderId,
+                item = item,
+                onDismiss = { pendingMoveItem = null }
             )
         }
     }
@@ -955,4 +983,246 @@ fun ItemCard(
             }
         }
     }
+}
+
+/**
+ * 移动物品对话框
+ * 支持三步导航：选择场所 → 选择区域（可层层进入） → 确认移动
+ */
+@Composable
+fun ItemMoveDialog(
+    viewModel: SpaceViewModel,
+    currentLocationId: String,
+    currentFolderId: String,
+    item: Item,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    // 当前导航状态
+    var selectedLocationId by remember { mutableStateOf<String?>(null) }
+    var currentParentId by remember { mutableStateOf<String?>(null) }
+    var navigationStack by remember { mutableStateOf(listOf<Pair<String?, String>>()) } // (parentId, name)
+    
+    // 获取所有场所
+    val locations by viewModel.locations.collectAsState()
+    
+    // 获取当前场所下的文件夹
+    val folders by if (selectedLocationId != null) {
+        viewModel.observeFolders(selectedLocationId!!, currentParentId).collectAsState(initial = emptyList())
+    } else {
+        remember { mutableStateOf(emptyList()) }
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 返回按钮
+                if (selectedLocationId != null) {
+                    IconButton(
+                        onClick = {
+                            if (navigationStack.isNotEmpty()) {
+                                // 返回上一级区域
+                                val newStack = navigationStack.dropLast(1)
+                                navigationStack = newStack
+                                currentParentId = newStack.lastOrNull()?.first
+                            } else {
+                                // 返回场所选择
+                                selectedLocationId = null
+                                currentParentId = null
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                }
+                
+                Text(
+                    text = when {
+                        selectedLocationId == null -> "选择目标场所"
+                        navigationStack.isEmpty() -> "选择目标区域"
+                        else -> navigationStack.last().second
+                    },
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = 400.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (selectedLocationId == null) {
+                    // 显示场所列表
+                    Text(
+                        text = "移动 \"${item.name}\" 到：",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(locations, key = { it.id }) { location ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        selectedLocationId = location.id
+                                        currentParentId = null
+                                        navigationStack = emptyList()
+                                    },
+                                color = if (location.id == currentLocationId) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = location.icon ?: "📍",
+                                        fontSize = 24.sp
+                                    )
+                                    Text(
+                                        text = location.name,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    if (location.id == currentLocationId) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Text(
+                                            text = "当前",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 显示区域列表
+                    if (folders.isEmpty()) {
+                        Text(
+                            text = if (navigationStack.isEmpty()) "该场所下没有区域" else "该区域下没有子区域",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(folders, key = { it.id }) { folder ->
+                                val isCurrentFolder = folder.id == currentFolderId
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(enabled = !isCurrentFolder) {
+                                            // 进入该区域
+                                            navigationStack = navigationStack + (currentParentId to folder.name)
+                                            currentParentId = folder.id
+                                        },
+                                    color = if (isCurrentFolder) {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Text(
+                                            text = folder.icon ?: "📁",
+                                            fontSize = 20.sp
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = folder.name,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = if (isCurrentFolder) {
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
+                                            )
+                                            if (folder.subFolderCount > 0) {
+                                                Text(
+                                                    text = "${folder.subFolderCount} 个子区域",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                        if (isCurrentFolder) {
+                                            Text(
+                                                text = "当前位置",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            // 只有选择了区域后才显示确认按钮
+            if (selectedLocationId != null && currentParentId != null && currentParentId != currentFolderId) {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        // 执行移动
+                        viewModel.updateItemFull(
+                            itemId = item.id,
+                            name = item.name,
+                            note = item.note,
+                            expiryDateEpochMs = item.expiryDateEpochMs,
+                            currentQuantity = item.currentQuantity,
+                            minQuantity = item.minQuantity,
+                            imagePath = item.imagePath,
+                            tagIds = emptyList(),
+                            folderId = currentParentId!!
+                        )
+                        Toast.makeText(context, "已移动到 ${navigationStack.lastOrNull()?.second ?: "目标区域"}", Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("移动到此")
+                }
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(100.dp)
+            ) { Text("取消") }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
+    )
 }

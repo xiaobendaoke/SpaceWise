@@ -82,7 +82,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun LocationsScreen(
     viewModel: SpaceViewModel,
-    onLocationClick: (String) -> Unit
+    onLocationClick: (String) -> Unit,
+    onVaultClick: () -> Unit = {}
 ) {
     val locations by viewModel.locations.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -168,6 +169,11 @@ fun LocationsScreen(
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                // 保险箱入口
+                item(key = "vault") {
+                    VaultEntryCard(onClick = onVaultClick)
+                }
+                
                 items(locations, key = { it.id }) { location ->
                     LocationCard(
                         location = location,
@@ -541,6 +547,64 @@ fun LocationCard(
                     text = "${location.folderCount} 个区域 · ${location.itemCount} 个物品",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 保险箱入口卡片
+ */
+@Composable
+fun VaultEntryCard(
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                clip = false,
+                ambientColor = Color(0x40685B68),
+                spotColor = Color(0x40685B68)
+            )
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.1f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "🔐",
+                    fontSize = 48.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "保险箱",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = "安全存储重要物品",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                 )
             }
         }

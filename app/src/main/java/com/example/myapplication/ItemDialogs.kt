@@ -34,6 +34,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,8 +48,6 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
@@ -56,10 +57,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -166,11 +167,15 @@ fun ItemUpsertDialog(
                     onValueChange = {},  // 禁止手动输入
                     readOnly = true,
                     label = { Text("过期日期") },
-                    trailingIcon = {
-                        IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Filled.CalendarToday, contentDescription = "选择日期")
-                        }
-                    },
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(
+                            Icons.Filled.CalendarToday,
+                            contentDescription = "选择日期",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { showDatePicker = true },
@@ -330,34 +335,16 @@ fun ItemUpsertDialog(
         shape = RoundedCornerShape(24.dp)
     )
 
-    // 日历选择器对话框
+    // 三步日期选择器对话框
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = SpaceViewModel.parseDateToEpochMs(expiry) ?: System.currentTimeMillis()
-        )
-        
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            expiry = SpaceViewModel.formatEpochMsToDate(millis) ?: ""
-                        }
-                        showDatePicker = false
-                    },
-                    shape = RoundedCornerShape(100.dp)
-                ) { Text("确定") }
+        StepDatePickerDialog(
+            initialDate = expiry.takeIf { it.isNotBlank() },
+            onDateSelected = { dateStr ->
+                expiry = dateStr
+                showDatePicker = false
             },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showDatePicker = false },
-                    shape = RoundedCornerShape(100.dp)
-                ) { Text("取消") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            onDismiss = { showDatePicker = false }
+        )
     }
 
     fullscreenImagePath?.let { path ->
@@ -454,6 +441,219 @@ fun FullScreenImageDialog(
                         .clickable(enabled = false) { }
                 )
             }
+        }
+    }
+}
+
+/**
+ * 日期选择器步骤
+ */
+private enum class DatePickerStep { YEAR, MONTH, DAY }
+
+/**
+ * 三步日期选择器对话框
+ * 流程：选择年份 → 选择月份 → 选择日期
+ */
+@Composable
+fun StepDatePickerDialog(
+    initialDate: String?,  // 格式 "yyyy-MM-dd" 或 null
+    onDateSelected: (String) -> Unit,  // 返回 "yyyy-MM-dd"
+    onDismiss: () -> Unit
+) {
+    // 解析初始日期
+    val calendar = java.util.Calendar.getInstance()
+    initialDate?.let {
+        SpaceViewModel.parseDateToEpochMs(it)?.let { millis ->
+            calendar.timeInMillis = millis
+        }
+    }
+    
+    var step by remember { mutableStateOf(DatePickerStep.YEAR) }
+    var selectedYear by remember { mutableIntStateOf(calendar.get(java.util.Calendar.YEAR)) }
+    var selectedMonth by remember { mutableIntStateOf(calendar.get(java.util.Calendar.MONTH) + 1) }
+    
+    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+    val years = remember { (currentYear..currentYear + 10).toList() }
+    val months = remember { (1..12).toList() }
+    
+    // 计算当前年月的天数
+    val daysInMonth = remember(selectedYear, selectedMonth) {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(selectedYear, selectedMonth - 1, 1)
+        cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+    }
+    val days = remember(daysInMonth) { (1..daysInMonth).toList() }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 标题栏
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 返回按钮
+                    if (step != DatePickerStep.YEAR) {
+                        IconButton(
+                            onClick = {
+                                step = when (step) {
+                                    DatePickerStep.MONTH -> DatePickerStep.YEAR
+                                    DatePickerStep.DAY -> DatePickerStep.MONTH
+                                    else -> step
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回"
+                            )
+                        }
+                    }
+                    
+                    Text(
+                        text = when (step) {
+                            DatePickerStep.YEAR -> "选择年份"
+                            DatePickerStep.MONTH -> "${selectedYear}年 - 选择月份"
+                            DatePickerStep.DAY -> "${selectedYear}年${selectedMonth}月 - 选择日期"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // 网格内容
+                when (step) {
+                    DatePickerStep.YEAR -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.heightIn(max = 300.dp)
+                        ) {
+                            items(years) { year ->
+                                DatePickerGridItem(
+                                    text = "${year}年",
+                                    isSelected = year == selectedYear,
+                                    onClick = {
+                                        selectedYear = year
+                                        step = DatePickerStep.MONTH
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    DatePickerStep.MONTH -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.heightIn(max = 200.dp)
+                        ) {
+                            items(months) { month ->
+                                DatePickerGridItem(
+                                    text = "${month}月",
+                                    isSelected = month == selectedMonth,
+                                    onClick = {
+                                        selectedMonth = month
+                                        step = DatePickerStep.DAY
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    DatePickerStep.DAY -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(5),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.heightIn(max = 350.dp)
+                        ) {
+                            items(days) { day ->
+                                DatePickerGridItem(
+                                    text = "$day",
+                                    isSelected = false,
+                                    onClick = {
+                                        // 格式化日期并返回
+                                        val dateStr = String.format(
+                                            java.util.Locale.US,
+                                            "%04d-%02d-%02d",
+                                            selectedYear,
+                                            selectedMonth,
+                                            day
+                                        )
+                                        onDateSelected(dateStr)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // 取消按钮
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("取消")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 日期选择器网格项
+ */
+@Composable
+private fun DatePickerGridItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .aspectRatio(1.0f)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        },
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(
+                2.dp,
+                MaterialTheme.colorScheme.primary
+            )
+        } else null
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
         }
     }
 }
