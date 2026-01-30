@@ -51,6 +51,8 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -478,42 +480,73 @@ fun FolderBrowserScreen(
                 }
 
                 
-                // 分类图标选择
-                IconCategoryInline("常用", listOf("📁", "🛋️", "🛏️", "🍳", "🚿", "📚", "📦", "🧰"), newFolderIcon, newFolderCoverPath) { 
-                    newFolderIcon = it
-                    newFolderCoverPath = null
+                // 可折叠的预设图标选择区域
+                var iconSectionExpanded by remember { mutableStateOf(false) }
+                
+                // 折叠标题行
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .clickable { iconSectionExpanded = !iconSectionExpanded }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "选择预设图标",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Icon(
+                        imageVector = if (iconSectionExpanded) 
+                            Icons.Filled.KeyboardArrowDown 
+                        else 
+                            Icons.Filled.KeyboardArrowRight,
+                        contentDescription = if (iconSectionExpanded) "收起" else "展开",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                IconCategoryInline("客厅", FolderIcons.livingRoom, newFolderIcon, newFolderCoverPath) { 
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("卧室", FolderIcons.bedroom, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("厨房", FolderIcons.kitchen, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("浴室", FolderIcons.bathroom, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("书房", FolderIcons.study, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("收纳", FolderIcons.storage, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("儿童", FolderIcons.kids, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
-                }
-                IconCategoryInline("其他", FolderIcons.misc, newFolderIcon, newFolderCoverPath) {
-                    newFolderIcon = it
-                    newFolderCoverPath = null
+                
+                // 展开时显示所有图标分类
+                if (iconSectionExpanded) {
+                    IconCategoryInline("常用", listOf("📁", "🛋️", "🛏️", "🍳", "🚿", "📚", "📦", "🧰"), newFolderIcon, newFolderCoverPath) { 
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("客厅", FolderIcons.livingRoom, newFolderIcon, newFolderCoverPath) { 
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("卧室", FolderIcons.bedroom, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("厨房", FolderIcons.kitchen, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("浴室", FolderIcons.bathroom, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("书房", FolderIcons.study, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("收纳", FolderIcons.storage, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("儿童", FolderIcons.kids, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
+                    IconCategoryInline("其他", FolderIcons.misc, newFolderIcon, newFolderCoverPath) {
+                        newFolderIcon = it
+                        newFolderCoverPath = null
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
